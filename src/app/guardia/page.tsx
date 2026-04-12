@@ -130,22 +130,18 @@ export default function GuardiaPortal() {
         } catch (e) { console.error(e); }
     };
     
-    const refreshManagementData = async () => {
-        try {
-              await Promise.all([fetchHistory(), fetchAllOwners()]);
-        } catch (e) { console.error(e); }
-    };
-    fetchAllOwners()
-      ]);
-      
-      // Auto-fix Fix DueÃ±o Lote 114 (v5.8)
-      const { error: fixErr } = await supabase.from('profiles').update({ status: 'active' }).eq('lote', '114');
-      if (fixErr) console.warn("Aviso: No se pudo auto-activar perfiles del lote 114.");
-    } catch (e) {
-      console.error("Error refreshing data:", e);
-    }
-  };
+      const refreshManagementData = async () => {
+            try {
+                    await Promise.all([
+                              fetchPendingOwners(),
+                              fetchPendingVisitors(),
+                              fetchHistory(),
+                              fetchAllOwners()
+                            ]);
+            } catch (e) { console.error("Error refreshing management data:", e); }
+      };
 
+    
   const cargarModelosIA = async () => {
     try {
       if (isFaceApiLoaded) return;
