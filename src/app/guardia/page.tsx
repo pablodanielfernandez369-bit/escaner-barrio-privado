@@ -107,31 +107,35 @@ export default function GuardiaPortal() {
       if (profile?.role !== 'guard' && profile?.role !== 'admin') {
         router.push("/");
         return;
-      }
-
-      await cargarModelosIA();
-      await refreshAllData();
-      setLoading(false);
-    };
-    checkUser();
+     await cargarModelosIA();
+            await refreshCriticalData();
+            await refreshManagementData();
+            setLoading(false);
+      };
+        checkUser();
+      
+        const cInt = setInterval(refreshCriticalData, 10000);
+        const mInt = setInterval(refreshManagementData, 300000);
+        return () => { clearInterval(cInt); clearInterval(mInt); };
+    }, []);
     
-    // AUTO-REFRESH cada 10 segundos
-    const interval = setInterval(() => {
-        refreshAllData();
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const refreshAllData = async () => {
-    try {
-      await Promise.all([
-        fetchPendingOwners(),
-        fetchPendingVisitors(),
-        fetchApprovedVisitors(),
-        fetchExpectedToday(),
-        fetchHistory(),
-        fetchAllOwners()
+    const getLocalDate = () => {
+        const d = new Date();
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0');
+    };
+    
+    const refreshCriticalData = async () => {
+        try {
+              await Promise.all([fetchApprovedVisitors(), fetchExpectedToday()]);
+        } catch (e) { console.error(e); }
+    };
+    
+    const refreshManagementData = async () => {
+        try {
+              await Promise.all([fetchHistory(), fetchAllOwners()]);
+        } catch (e) { console.error(e); }
+    };
+    fetchAllOwners()
       ]);
       
       // Auto-fix Fix DueÃ±o Lote 114 (v5.8)
@@ -181,7 +185,7 @@ export default function GuardiaPortal() {
   };
 
   const fetchExpectedToday = async () => {
-    const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDate(); t
     const { data, error } = await supabase
         .from('visitor_records')
         .select(`
@@ -205,19 +209,16 @@ export default function GuardiaPortal() {
     }
   };
 
+  
   const fetchHistory = async () => {
-    // Calculamos la fecha de hace 90 dÃ­as
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    const ninetyDaysAgoIso = ninetyDaysAgo.toISOString();
+        const { data } = await supabase
+          .from('visitor_records')
+          .select('*, invitations(expected_date, profiles(lote))')
+          .order('updated_at', { ascending: false })
+          .limit(30);
+        if (data) setHistoryRecords(data as any);
+  };
 
-    const { data } = await supabase
-        .from('visitor_records')
-        .select('*, invitations (expected_date, profiles(lote))')
-        .gte('updated_at', ninetyDaysAgoIso) // Filtro de 90 dÃ­as
-        .order('updated_at', { ascending: false })
-        .limit(200);
-    if (data) setHistoryRecords(data as any);
   };
 
   const fetchAllOwners = async () => {
