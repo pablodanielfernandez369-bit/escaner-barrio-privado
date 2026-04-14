@@ -144,16 +144,17 @@ export default function OwnerDashboard() {
         )
       }));
 
-      // FILTRO ROBUSTO: Solo mostrar si tiene registros biométricos O si el nombre NO es el placeholder
+      // FILTRO ULTRA-ESTRICTO:
+      // Solo mostramos la invitación si YA EXISTE un registro en visitor_records.
+      // O si el nombre NO es el marcador predeterminado (para casos manuales).
       const filteredData = sortedData.filter(inv => {
-        const hasRecords = inv.visitor_records && inv.visitor_records.length > 0;
+        const hasRealRecords = inv.visitor_records && inv.visitor_records.length > 0;
         const currentName = (inv.visitor_name || "").trim().toLowerCase();
         const pkgName = "invitado a identificar";
         
-        // Es placeholder si está vacío o si coincide con el texto genérico
-        const isPlaceholder = currentName === "" || currentName === pkgName;
+        const isNotPlaceholder = currentName !== "" && currentName !== pkgName;
         
-        return hasRecords || !isPlaceholder;
+        return hasRealRecords || isNotPlaceholder;
       });
 
       setActiveInvitations(filteredData);
@@ -396,7 +397,7 @@ export default function OwnerDashboard() {
     }
 
     // SI FALLA o NO EXISTE, abrimos la pantalla para compartir
-    alert(`âš ï¸ No se encontraron registros de ${inv.visitor_name}. Compartile el enlace para su registro biomÃ©trico inicial.`);
+    alert(`⚠ No se encontraron registros de ${inv.visitor_name}. Compartile el enlace para su registro biométrico inicial.`);
     const link = `${window.location.origin}/visitante/${inv.id}`;
     setInvitationLink(link);
     setSubmitting(false);
@@ -719,7 +720,7 @@ export default function OwnerDashboard() {
                     visibleInvitations.map((inv) => {
                             const rec = inv.visitor_records?.[0];
                             
-                            // DetecciÃ³n de estado por marcador redundante (Fix SincronizaciÃ³n)
+                            // Detección de estado por marcador redundante (Fix Sincronización)
                             let status = rec?.status || 'no_registered';
                             const invName = rec?.full_name || inv.visitor_name || "Invitado a Identificar";
                             
@@ -727,11 +728,11 @@ export default function OwnerDashboard() {
                                 if (invName.includes("[INGRESÓ]")) status = 'inside';
                                 else if (invName.includes("[SALIÓ]")) status = 'completed';
                                 else if (invName.includes("[APROBADO]")) status = 'approved';
-                                else if (invName !== "Invitado a Identificar" && inv.visitor_dni) status = 'pending';
+                                else if (invName.toLowerCase() !== "invitado a identificar" && inv.visitor_dni) status = 'pending';
                             }
                             
                             const cleanName = invName.replace(/ \[.*\]/, "");
-                            const initChar = cleanName !== "Invitado a Identificar" ? cleanName[0].toUpperCase() : "I";
+                            const initChar = cleanName.toLowerCase() !== "invitado a identificar" ? cleanName[0].toUpperCase() : "I";
                             const dniToShow = rec?.dni || inv.visitor_dni || "";
                         
                         return (
@@ -768,7 +769,7 @@ export default function OwnerDashboard() {
                                           onClick={() => handleExpressAuthorization(inv)}
                                           disabled={submitting}
                                           className="p-3 bg-white/5 hover:bg-emerald-500 hover:text-white rounded-xl transition-all disabled:opacity-50"
-                                          title="AutorizaciÃ³n ExprÃ©s / Compartir"
+                                          title="Autorización Exprés / Compartir"
                                         >
                                             <Share2 className="w-4 h-4" />
                                         </button>
@@ -873,7 +874,7 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Cambiar ContraseÃ±a</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Cambiar Contraseña</label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
                       <input 
@@ -914,4 +915,3 @@ export default function OwnerDashboard() {
     </div>
   );
 }
-
