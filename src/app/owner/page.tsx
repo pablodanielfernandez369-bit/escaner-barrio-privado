@@ -414,17 +414,18 @@ export default function OwnerDashboard() {
     setSubmitting(true);
     setErrorDetails(null);
 
+    const today = getLocalDate();
     const { data, error } = await supabase
       .from("invitations")
       .insert([
           { 
             visitor_name: invitationType === 'delivery' ? `DELIVERY (${userProfile?.full_name})` : "Invitado a Identificar", 
-            expected_date: (invitationType === 'permanent' || invitationType === 'worker' || invitationType === 'delivery') ? startDate : expectedDate, 
+            expected_date: invitationType === 'delivery' ? today : (invitationType === 'permanent' || invitationType === 'worker') ? startDate : expectedDate, 
             owner_id: userProfile.id,
             type: invitationType,
             category: invitationType === 'worker' ? workerCategory : null,
-            start_date: (invitationType === 'permanent' || invitationType === 'worker' || invitationType === 'delivery') ? startDate : null,
-            end_date: (invitationType === 'permanent' || invitationType === 'worker' || invitationType === 'delivery') ? endDate : null,
+            start_date: (invitationType === 'permanent' || invitationType === 'worker') ? startDate : invitationType === 'delivery' ? today : null,
+            end_date: (invitationType === 'permanent' || invitationType === 'worker') ? endDate : null,
             delivery_quantity: invitationType === 'delivery' ? deliveryQuantity : 1,
             delivery_count: 0
           }
