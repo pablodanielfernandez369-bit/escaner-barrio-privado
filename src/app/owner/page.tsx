@@ -147,8 +147,8 @@ export default function OwnerDashboard() {
 
       // FILTRO ROBUSTO: Solo mostrar si tiene registros biométricos O si el nombre NO es el placeholder
       const filteredData = sortedData.filter(inv => {
-        // Si es delivery y ya entraron todos, ocultarlo
-        if (inv.type === 'delivery' && inv.delivery_count >= inv.delivery_quantity) {
+        // Si es delivery y ya salieron todos, ocultarlo
+        if (inv.type === 'delivery' && (inv.delivery_exit_count || 0) >= inv.delivery_quantity) {
           return false;
         }
 
@@ -825,15 +825,27 @@ export default function OwnerDashboard() {
                                         </p>
                                         <div className="mt-2 flex items-center gap-2">
                                             {isDelivery ? (
-                                                <>
+                                                <div className="flex flex-wrap gap-2">
                                                     {inv.delivery_count === 0 ? (
                                                         <span className="text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Por ingresar al barrio</span>
                                                     ) : (
-                                                        <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">
-                                                            Ingresó al barrio ({inv.delivery_count} de {inv.delivery_quantity})
-                                                        </span>
+                                                        <>
+                                                            <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">
+                                                                Ingresó ({inv.delivery_count} de {inv.delivery_quantity})
+                                                            </span>
+                                                            {(inv.delivery_exit_count || 0) > 0 && (
+                                                                <span className="text-[8px] font-black uppercase text-red-400 bg-red-400/10 px-2 py-0.5 rounded">
+                                                                    Egresó ({inv.delivery_exit_count} de {inv.delivery_quantity})
+                                                                </span>
+                                                            )}
+                                                            {(inv.delivery_count - (inv.delivery_exit_count || 0)) > 0 && (
+                                                                <span className="text-[8px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded animate-pulse">
+                                                                    {(inv.delivery_count - (inv.delivery_exit_count || 0))} en barrio
+                                                                </span>
+                                                            )}
+                                                        </>
                                                     )}
-                                                </>
+                                                </div>
                                             ) : (
                                                 <>
                                                     {status === 'no_registered' && <span className="text-[8px] font-black uppercase text-slate-400 bg-slate-800/50 px-2 py-0.5 rounded border border-white/5">Esperando Registro</span>}

@@ -330,21 +330,62 @@ export default function GuardiaPortal() {
     if (data) setDeliveryInvitations(data);
   };
 
-  const handleIncrementDeliveryCount = async (invId: string, currentCount: number, maxQty: number) => {
-    if (currentCount >= maxQty) {
-      alert("Este pase de delivery ya alcanzó el límite de ingresos autorizados.");
-      return;
-    }
+  const handleDeliveryAction = async (inv: any, actionType: 'entry' | 'exit') => {
+    const currentCount = inv.delivery_count || 0;
+    const currentExitCount = inv.delivery_exit_count || 0;
+    const maxQty = inv.delivery_quantity;
 
-    const { error } = await supabase
-      .from('invitations')
-      .update({ delivery_count: currentCount + 1 })
-      .eq('id', invId);
+    if (actionType === 'entry') {
+      if (currentCount >= maxQty) {
+        alert("Este pase de delivery ya alcanzó el límite de ingresos autorizados.");
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('invitations')
+        .update({ delivery_count: currentCount + 1 })
+        .eq('id', inv.id);
 
-    if (!error) {
-      await fetchDeliveryInvitations();
+      if (!error) {
+        // Log en historial
+        await supabase.from('visitor_records').insert([{
+          full_name: `DELIVERY - INGRESO (${currentCount + 1}/${maxQty})`,
+          dni: `LOTE ${inv.profiles?.lote}`,
+          status: 'inside',
+          entry_at: new Date().toISOString(),
+          invitation_id: inv.id
+        }]);
+        await fetchDeliveryInvitations();
+        await fetchHistory();
+      } else {
+        alert("Error al registrar ingreso: " + error.message);
+      }
     } else {
-      alert("Error al registrar ingreso de delivery: " + error.message);
+      // EXIT
+      if (currentExitCount >= currentCount) {
+        alert("No hay repartidores dentro del barrio para registrar salida.");
+        return;
+      }
+
+      const { error } = await supabase
+        .from('invitations')
+        .update({ delivery_exit_count: currentExitCount + 1 })
+        .eq('id', inv.id);
+
+      if (!error) {
+        // Log en historial (Salida)
+        await supabase.from('visitor_records').insert([{
+          full_name: `DELIVERY - EGRESO (${currentExitCount + 1}/${maxQty})`,
+          dni: `LOTE ${inv.profiles?.lote}`,
+          status: 'completed',
+          exit_at: new Date().toISOString(),
+          invitation_id: inv.id
+        }]);
+        await fetchDeliveryInvitations();
+        await fetchHistory();
+      } else {
+        alert("Error al registrar salida: " + error.message);
+      }
     }
   };
 
@@ -1501,49 +1542,73 @@ export default function GuardiaPortal() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {deliveryInvitations.filter(inv => 
-                        inv.profiles?.lote?.toString().includes(deliverySearch) || 
-                        inv.profiles?.full_name?.toLowerCase().includes(deliverySearch.toLowerCase())
-                    ).length > 0 ? (
-                        deliveryInvitations.filter(inv => 
-                            inv.profiles?.lote?.toString().includes(deliverySearch) || 
-                            inv.profiles?.full_name?.toLowerCase().includes(deliverySearch.toLowerCase())
-                        ).map(inv => {
-                            const isCompleted = inv.delivery_count >= inv.delivery_quantity;
+                    {deliveryInvitations.filter(inv => {
+                        const searchMatch = inv.profiles?.lote?.toString().includes(deliverySearch) || 
+                                           inv.profiles?.full_name?.toLowerCase().includes(deliverySearch.toLowerCase());
+                        const isFullyExited = (inv.delivery_exit_count || 0) >= inv.delivery_quantity;
+                        return searchMatch && !isFullyExited;
+                    }).length > 0 ? (
+                        deliveryInvitations.filter(inv => {
+                            const searchMatch = inv.profiles?.lote?.toString().includes(deliverySearch) || 
+                                               inv.profiles?.full_name?.toLowerCase().includes(deliverySearch.toLowerCase());
+                            const isFullyExited = (inv.delivery_exit_count || 0) >= inv.delivery_quantity;
+                            return searchMatch && !isFullyExited;
+                        }).map(inv => {
+                            const entries = inv.delivery_count || 0;
+                            const exits = inv.delivery_exit_count || 0;
+                            const max = inv.delivery_quantity;
+                            const isFullyEntered = entries >= max;
+                            const insideNow = entries - exits;
+
                             return (
-                                <div key={inv.id} className={`bg-slate-900 border ${isCompleted ? 'border-white/5 opacity-50' : 'border-blue-500/20 shadow-md'} p-3 rounded-2xl transition-all relative overflow-hidden group`}>
-                                    <div className="flex items-center gap-4">
+                                <div key={inv.id} className="bg-slate-900 border border-blue-500/20 shadow-md p-3 rounded-2xl transition-all relative overflow-hidden group">
+                                    <div className="flex items-center gap-3">
                                         {/* Izquierda: Lote */}
-                                        <div className="bg-slate-950 px-3 py-1.5 rounded-xl border border-white/5 text-center min-w-[50px]">
-                                            <span className="text-[7px] font-black text-slate-600 block uppercase leading-none mb-1">Lote</span>
-                                            <span className="text-lg font-black text-white leading-none">{inv.profiles?.lote}</span>
+                                        <div className="bg-slate-950 px-2.5 py-1.5 rounded-xl border border-white/5 text-center min-w-[45px]">
+                                            <span className="text-[6px] font-black text-slate-600 block uppercase leading-none mb-1">Lote</span>
+                                            <span className="text-base font-black text-white leading-none">{inv.profiles?.lote}</span>
                                         </div>
 
                                         {/* Centro: Info */}
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[10px] font-black text-white uppercase truncate mb-0.5">{inv.profiles?.full_name}</p>
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest leading-none">Progreso:</p>
-                                                <span className="text-xs font-black text-blue-400 leading-none">{inv.delivery_count} / {inv.delivery_quantity}</span>
+                                            <p className="text-[9px] font-black text-white uppercase truncate mb-0.5">{inv.profiles?.full_name}</p>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1">
+                                                    <LogIn className="w-2.5 h-2.5 text-blue-400" />
+                                                    <span className="text-[9px] font-black text-blue-400">{entries}/{max}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <LogOutIcon className="w-2.5 h-2.5 text-red-400" />
+                                                    <span className="text-[9px] font-black text-red-400">{exits}/{max}</span>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Derecha: Botón */}
-                                        <button 
-                                            disabled={isCompleted}
-                                            onClick={() => handleIncrementDeliveryCount(inv.id, inv.delivery_count, inv.delivery_quantity)}
-                                            className={`px-4 py-2.5 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
-                                                isCompleted 
-                                                ? 'bg-emerald-500/10 text-emerald-500 cursor-not-allowed border border-emerald-500/20'
-                                                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm'
-                                            }`}
-                                        >
-                                            {isCompleted ? (
-                                                <><CheckCircle2 className="w-3 h-3" /> OK</>
-                                            ) : (
-                                                <><Hand className="w-3 h-3" /> Ingresar</>
-                                            )}
-                                        </button>
+                                        {/* Derecha: Botones */}
+                                        <div className="flex flex-col gap-1">
+                                            <button 
+                                                disabled={isFullyEntered}
+                                                onClick={() => handleDeliveryAction(inv, 'entry')}
+                                                className={`px-3 py-1.5 rounded-lg font-black text-[7px] uppercase tracking-tighter transition-all active:scale-95 flex items-center justify-center gap-1 ${
+                                                    isFullyEntered 
+                                                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                                                    : 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm'
+                                                }`}
+                                            >
+                                                <LogIn className="w-2.5 h-2.5" /> Ingreso
+                                            </button>
+                                            <button 
+                                                disabled={insideNow <= 0}
+                                                onClick={() => handleDeliveryAction(inv, 'exit')}
+                                                className={`px-3 py-1.5 rounded-lg font-black text-[7px] uppercase tracking-tighter transition-all active:scale-95 flex items-center justify-center gap-1 ${
+                                                    insideNow <= 0 
+                                                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
+                                                    : 'bg-red-600 hover:bg-red-500 text-white shadow-sm'
+                                                }`}
+                                            >
+                                                <LogOutIcon className="w-2.5 h-2.5" /> Egreso
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             );
