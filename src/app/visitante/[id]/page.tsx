@@ -388,62 +388,62 @@ export default function VisitorPass() {
                     <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Foto del Documento</p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                    <div className="flex flex-col gap-2">
-                      <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Frente</p>
-                      <div className="aspect-[16/10] bg-slate-950 rounded-3xl overflow-hidden border-2 border-white/5 relative flex items-center justify-center group">
+                  <div className="space-y-8 w-full">
+                    <div className="flex flex-col gap-3">
+                      <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Frente del Documento</p>
+                      <div className="aspect-[4/3] bg-slate-950 rounded-[2.5rem] overflow-hidden border-2 border-emerald-500/20 relative flex items-center justify-center group shadow-2xl">
                         {isCapturing && isCapturingDni === 'front' ? (
                           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                         ) : dniPhoto ? (
                           <img src={dniPhoto} className="w-full h-full object-cover" alt="DNI Frente" />
                         ) : (
                           <div className="flex flex-col items-center gap-2">
-                             <div className="p-4 bg-emerald-500/10 rounded-full mb-2">
-                               <Camera className="w-8 h-8 text-emerald-500" />
+                             <div className="p-5 bg-emerald-500/10 rounded-full mb-2">
+                               <Camera className="w-10 h-10 text-emerald-500" />
                              </div>
-                             <p className="text-[9px] font-black uppercase text-emerald-500 tracking-widest">Tocar para capturar</p>
+                             <p className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">Listo para capturar</p>
                           </div>
                         )}
                         {!dniPhoto && !isCapturing && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                             <button onClick={() => { setIsCapturingDni('front'); startCamera(); }} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 active:scale-95 transition-all">
-                               <Camera className="w-4 h-4" /> Tomar Foto
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                             <button onClick={() => { setIsCapturingDni('front'); startCamera(); }} className="px-8 py-4 bg-emerald-500 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-3 active:scale-95 transition-all">
+                               <Camera className="w-5 h-5" /> Iniciar Cámara
                              </button>
                           </div>
                         )}
                         {dniPhoto && !isCapturing && (
                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                             <button onClick={() => { setIsCapturingDni('front'); startCamera(); }} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Camera className="w-4 h-4" /></button>
+                             <button onClick={() => { setIsCapturingDni('front'); startCamera(); }} className="p-5 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-6 h-6" /></button>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                      <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Dorso</p>
-                      <div className="aspect-[16/10] bg-slate-950 rounded-3xl overflow-hidden border-2 border-white/5 relative flex items-center justify-center group">
+                    <div className="flex flex-col gap-3">
+                      <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Dorso del Documento</p>
+                      <div className="aspect-[4/3] bg-slate-950 rounded-[2.5rem] overflow-hidden border-2 border-emerald-500/20 relative flex items-center justify-center group shadow-2xl">
                         {isCapturing && isCapturingDni === 'back' ? (
                           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                         ) : dniBackPhoto ? (
                           <img src={dniBackPhoto} className="w-full h-full object-cover" alt="DNI Dorso" />
                         ) : (
                           <div className="flex flex-col items-center gap-2">
-                             <div className="p-4 bg-emerald-500/10 rounded-full mb-2">
-                               <Camera className="w-8 h-8 text-emerald-500" />
+                             <div className="p-5 bg-emerald-500/10 rounded-full mb-2">
+                               <Camera className="w-10 h-10 text-emerald-500" />
                              </div>
-                             <p className="text-[9px] font-black uppercase text-emerald-500 tracking-widest">Tocar para capturar</p>
+                             <p className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">Listo para capturar</p>
                           </div>
                         )}
                         {!dniBackPhoto && !isCapturing && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                             <button onClick={() => { setIsCapturingDni('back'); startCamera(); }} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 active:scale-95 transition-all">
-                               <Camera className="w-4 h-4" /> Tomar Foto
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                             <button onClick={() => { setIsCapturingDni('back'); startCamera(); }} className="px-8 py-4 bg-emerald-500 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-3 active:scale-95 transition-all">
+                               <Camera className="w-5 h-5" /> Iniciar Cámara
                              </button>
                           </div>
                         )}
                         {dniBackPhoto && !isCapturing && (
                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                             <button onClick={() => { setIsCapturingDni('back'); startCamera(); }} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Camera className="w-4 h-4" /></button>
+                             <button onClick={() => { setIsCapturingDni('back'); startCamera(); }} className="p-5 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-6 h-6" /></button>
                           </div>
                         )}
                       </div>
@@ -574,63 +574,67 @@ export default function VisitorPass() {
 
                         {/* Fotos Seguro Vehículo */}
                         <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                              <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest text-center block">Frente Seguro</label>
-                              <div className="aspect-video bg-slate-900 rounded-xl relative overflow-hidden border border-white/5 group">
-                                {isCapturing && isCapturingInsurance === 'vehicle' ? (
-                                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                                ) : vehicleInsurancePhoto ? (
-                                  <img src={vehicleInsurancePhoto} className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                                     <Camera className="w-6 h-6 text-slate-700" />
-                                     <p className="text-[8px] font-black text-slate-700 uppercase">Frente</p>
-                                  </div>
-                                )}
-                                {!vehicleInsurancePhoto && !isCapturing && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                     <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="px-4 py-2 bg-emerald-500 text-white rounded-full font-black text-[8px] uppercase tracking-widest shadow-lg flex items-center gap-2">
-                                       <Camera className="w-3 h-3" /> Tomar Foto
-                                     </button>
-                                  </div>
-                                )}
-                                {vehicleInsurancePhoto && !isCapturing && (
-                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                                     <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="p-2 bg-emerald-500 rounded-full text-white shadow-md"><Camera className="w-3 h-3" /></button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="space-y-2">
-                              <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest text-center block">Dorso Seguro</label>
-                              <div className="aspect-video bg-slate-900 rounded-xl relative overflow-hidden border border-white/5 group">
-                                {isCapturing && isCapturingInsurance === 'vehicle_back' ? (
-                                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                                ) : vehicleInsuranceBackPhoto ? (
-                                  <img src={vehicleInsuranceBackPhoto} className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                                     <Camera className="w-6 h-6 text-slate-700" />
-                                     <p className="text-[8px] font-black text-slate-700 uppercase">Dorso</p>
-                                  </div>
-                                )}
-                                {!vehicleInsuranceBackPhoto && !isCapturing && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                                     <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="px-4 py-2 bg-emerald-500 text-white rounded-full font-black text-[8px] uppercase tracking-widest shadow-lg flex items-center gap-2">
-                                       <Camera className="w-3 h-3" /> Tomar Foto
-                                     </button>
-                                  </div>
-                                )}
-                                {vehicleInsuranceBackPhoto && !isCapturing && (
-                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                                     <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="p-2 bg-emerald-500 rounded-full text-white shadow-md"><Camera className="w-3 h-3" /></button>
-                                  </div>
-                                )}
-                              </div>
+                          <div className="grid grid-cols-1 gap-6">
+                          <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center block">Frente del Seguro</label>
+                            <div className="aspect-[4/3] bg-slate-950 rounded-[2rem] relative overflow-hidden border-2 border-emerald-500/10 group shadow-xl flex items-center justify-center">
+                              {isCapturing && isCapturingInsurance === 'vehicle' ? (
+                                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                              ) : vehicleInsurancePhoto ? (
+                                <img src={vehicleInsurancePhoto} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                                   <div className="p-4 bg-emerald-500/10 rounded-full">
+                                      <ShieldCheck className="w-8 h-8 text-emerald-500" />
+                                   </div>
+                                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest italic">Capturar frente</p>
+                                </div>
+                              )}
+                              {!vehicleInsurancePhoto && !isCapturing && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                   <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2">
+                                     <Camera className="w-4 h-4" /> Tomar Foto
+                                   </button>
+                                </div>
+                              )}
+                              {vehicleInsurancePhoto && !isCapturing && (
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                                   <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="p-4 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-5 h-5" /></button>
+                                </div>
+                              )}
                             </div>
                           </div>
+
+                          <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center block">Dorso del Seguro</label>
+                            <div className="aspect-[4/3] bg-slate-950 rounded-[2rem] relative overflow-hidden border-2 border-emerald-500/10 group shadow-xl flex items-center justify-center">
+                              {isCapturing && isCapturingInsurance === 'vehicle_back' ? (
+                                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                              ) : vehicleInsuranceBackPhoto ? (
+                                <img src={vehicleInsuranceBackPhoto} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                                   <div className="p-4 bg-emerald-500/10 rounded-full">
+                                      <ShieldCheck className="w-8 h-8 text-emerald-500" />
+                                   </div>
+                                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest italic">Capturar dorso</p>
+                                </div>
+                              )}
+                              {!vehicleInsuranceBackPhoto && !isCapturing && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                   <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2">
+                                     <Camera className="w-4 h-4" /> Tomar Foto
+                                   </button>
+                                </div>
+                              )}
+                              {vehicleInsuranceBackPhoto && !isCapturing && (
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                                   <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="p-4 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-5 h-5" /></button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                    
                           <div className="flex gap-2">
                              <label className="flex-1 p-3 bg-slate-800 rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer text-[9px] font-black uppercase"><ImageIcon className="w-4 h-4" /> Desde Galería<input type="file" accept="image/*" className="hidden" onChange={(e) => { setIsCapturingInsurance('vehicle'); handleGalleryUpload(e); }} /></label>
@@ -663,26 +667,28 @@ export default function VisitorPass() {
                           <div className="space-y-2">
                             <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest ml-4">Credencial / Póliza</label>
                             <div className="flex items-center gap-3">
-                                <div className="flex-[2] relative group aspect-video">
+                                <div className="flex-1 relative group aspect-[4/3]">
                                   {isCapturing && isCapturingInsurance === 'work' ? (
-                                    <div className="w-full h-full bg-black rounded-xl overflow-hidden">
+                                    <div className="w-full h-full bg-slate-950 rounded-[2rem] overflow-hidden border-2 border-emerald-500/10">
                                       <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                                      <button onClick={capturePhoto} className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-blue-500 p-2 rounded-full shadow-lg"><Camera className="w-4 h-4 text-white" /></button>
+                                      <button onClick={capturePhoto} className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-emerald-500 p-4 rounded-full shadow-2xl active:scale-95 transition-all"><Camera className="w-6 h-6 text-white" /></button>
                                     </div>
                                   ) : workInsurancePhoto ? (
-                                    <div className="w-full h-full bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20 overflow-hidden relative">
+                                    <div className="w-full h-full bg-slate-950 rounded-[2rem] flex items-center justify-center border-2 border-emerald-500/10 overflow-hidden relative shadow-2xl">
                                       <img src={workInsurancePhoto} className="w-full h-full object-cover" />
-                                      <button onClick={() => setWorkInsurancePhoto(null)} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-md"><X className="w-3 h-3 text-white" /></button>
+                                      <button onClick={() => setWorkInsurancePhoto(null)} className="absolute top-4 right-4 bg-red-500/80 p-2 rounded-xl backdrop-blur-md transition-all active:scale-90"><X className="w-4 h-4 text-white" /></button>
                                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                                         <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="p-3 bg-blue-500 rounded-full text-white shadow-lg"><Camera className="w-4 h-4" /></button>
+                                         <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="p-5 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-6 h-6" /></button>
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="w-full h-full bg-slate-900 rounded-xl flex flex-col items-center justify-center border border-white/5 gap-2">
-                                      <Camera className="w-6 h-6 text-slate-700" />
-                                      <p className="text-[8px] font-black text-slate-700 uppercase">Certificado ART</p>
-                                      <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-full font-black text-[8px] uppercase tracking-widest shadow-lg flex items-center gap-2">
-                                        <Camera className="w-3 h-3" /> Tomar Foto
+                                    <div className="w-full h-full bg-slate-950 rounded-[2rem] flex flex-col items-center justify-center border-2 border-emerald-500/10 gap-3 shadow-2xl">
+                                      <div className="p-4 bg-emerald-500/10 rounded-full">
+                                        <Briefcase className="w-8 h-8 text-emerald-500" />
+                                      </div>
+                                      <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center px-4">Certificado ART / Seguro</p>
+                                      <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="mt-4 px-6 py-3 bg-emerald-600 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 active:scale-95 transition-all">
+                                        <Camera className="w-4 h-4" /> Iniciar Cámara
                                       </button>
                                     </div>
                                   )}

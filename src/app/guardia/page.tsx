@@ -976,8 +976,8 @@ export default function GuardiaPortal() {
       }
 
       if (upsertError) {
-        console.error("Error al sincronizar con el Banco de Identidades:", upsertError);
-        alert("Atención: Identidad aprobada para ingreso, pero falló el guardado permanente.");
+        console.error("Error crítico al sincronizar con el Banco de Identidades:", upsertError);
+        alert(`Atención: Identidad aprobada para ingreso, pero falló el guardado permanente.\n\nDetalle: ${upsertError.message || 'Error desconocido'}`);
       } else {
         console.log("Banco de Identidades y Sectores actualizados correctamente.");
       }
@@ -1125,7 +1125,7 @@ export default function GuardiaPortal() {
       .update({ status: 'rejected' })
       .eq('id', recordId)
       .select('invitation_id')
-      .single();
+      .maybeSingle();
 
     if (!error) {
       // 2. Sincronizar marcador en la invitación para el dueño
@@ -2439,106 +2439,82 @@ export default function GuardiaPortal() {
                     <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
                         <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-6">
                             {/* DNI FRENTE */}
+                            {viewingAuth.dni_front_url && (
                             <div>
                                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">DNI Frente</p>
                                 <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
-                                    {viewingAuth.dni_front_url ? (
-                                        <img src={viewingAuth.dni_front_url} className="w-full h-full object-cover" alt="DNI Frente" />
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-2 opacity-20"><ImageIcon className="w-10 h-10 text-slate-500" /></div>
-                                    )}
-                                    {viewingAuth.dni_front_url && (
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => setZoomedImg(viewingAuth.dni_front_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
-                                        </div>
-                                    )}
+                                    <img src={viewingAuth.dni_front_url} className="w-full h-full object-cover" alt="DNI Frente" />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.dni_front_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    </div>
                                 </div>
                             </div>
+                            )}
 
                             {/* DNI DORSO */}
+                            {viewingAuth.dni_back_url && (
                             <div>
                                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">DNI Dorso</p>
                                 <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
-                                    {viewingAuth.dni_back_url ? (
-                                        <img src={viewingAuth.dni_back_url} className="w-full h-full object-cover" alt="DNI Dorso" />
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-2 opacity-20"><ImageIcon className="w-10 h-10 text-slate-500" /></div>
-                                    )}
-                                    {viewingAuth.dni_back_url && (
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => setZoomedImg(viewingAuth.dni_back_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
-                                        </div>
-                                    )}
+                                    <img src={viewingAuth.dni_back_url} className="w-full h-full object-cover" alt="DNI Dorso" />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.dni_back_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    </div>
                                 </div>
                             </div>
+                            )}
 
                             {/* SELFIE */}
+                            {viewingAuth.selfie_url && (
                             <div>
                                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Selfie</p>
                                 <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
-                                    {viewingAuth.selfie_url ? (
-                                        <img src={viewingAuth.selfie_url} className="w-full h-full object-cover" alt="Selfie" />
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-2 opacity-20"><Camera className="w-10 h-10 text-slate-500" /></div>
-                                    )}
-                                    {viewingAuth.selfie_url && (
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => setZoomedImg(viewingAuth.selfie_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
-                                        </div>
-                                    )}
+                                    <img src={viewingAuth.selfie_url} className="w-full h-full object-cover" alt="Selfie" />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.selfie_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    </div>
                                 </div>
                             </div>
+                            )}
 
                             {/* SEGURO FRENTE */}
+                            {viewingAuth.vehicle_insurance_url && (
                             <div>
                                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Seguro Frente</p>
                                 <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
-                                    {viewingAuth.vehicle_insurance_url ? (
-                                        <img src={viewingAuth.vehicle_insurance_url} className="w-full h-full object-cover" alt="Seguro Frente" />
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-2 opacity-20"><ShieldCheck className="w-10 h-10 text-slate-500" /></div>
-                                    )}
-                                    {viewingAuth.vehicle_insurance_url && (
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
-                                        </div>
-                                    )}
+                                    <img src={viewingAuth.vehicle_insurance_url} className="w-full h-full object-cover" alt="Seguro Frente" />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    </div>
                                 </div>
                             </div>
+                            )}
 
                             {/* SEGURO DORSO */}
+                            {viewingAuth.vehicle_insurance_back_url && (
                             <div>
                                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Seguro Dorso</p>
                                 <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
-                                    {viewingAuth.vehicle_insurance_back_url ? (
-                                        <img src={viewingAuth.vehicle_insurance_back_url} className="w-full h-full object-cover" alt="Seguro Dorso" />
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-2 opacity-20"><ShieldCheck className="w-10 h-10 text-slate-500" /></div>
-                                    )}
-                                    {viewingAuth.vehicle_insurance_back_url && (
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_back_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
-                                        </div>
-                                    )}
+                                    <img src={viewingAuth.vehicle_insurance_back_url} className="w-full h-full object-cover" alt="Seguro Dorso" />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_back_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    </div>
                                 </div>
                             </div>
+                            )}
 
                             {/* ART */}
+                            {viewingAuth.work_insurance_url && (
                             <div>
                                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Seguro ART</p>
                                 <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
-                                    {viewingAuth.work_insurance_url ? (
-                                        <img src={viewingAuth.work_insurance_url} className="w-full h-full object-cover" alt="ART" />
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-2 opacity-20"><Briefcase className="w-10 h-10 text-slate-500" /></div>
-                                    )}
-                                    {viewingAuth.work_insurance_url && (
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => setZoomedImg(viewingAuth.work_insurance_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
-                                        </div>
-                                    )}
+                                    <img src={viewingAuth.work_insurance_url} className="w-full h-full object-cover" alt="ART" />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.work_insurance_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    </div>
                                 </div>
                             </div>
+                            )}
                         </div>
 
                         {viewingAuth.vehicle_patente && (
