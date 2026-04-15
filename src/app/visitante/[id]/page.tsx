@@ -54,7 +54,7 @@ export default function VisitorPass() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isCapturingInsurance, setIsCapturingInsurance] = useState<'vehicle' | 'vehicle_back' | 'work' | null>(null);
-  const [isCapturingDni, setIsCapturingDni] = useState<'front' | 'back' | null>(null);
+  const [isCapturingDni, setIsCapturingDni] = useState<'front' | 'back' | 'selfie' | null>(null);
 
 
   // EFECTO PRINCIPAL: Se asegura de que el video reciba el stream cuando el elemento ya fue dibujado en el DOM
