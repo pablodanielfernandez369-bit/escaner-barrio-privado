@@ -8,15 +8,19 @@ import {
   Users, UserCheck, ShieldPlus, Camera, CheckCircle2, XCircle, 
   Search, Loader2, PlayCircle, LogOut, ChevronDown, UserX, Briefcase,
   Settings, Lock, Save, ShieldCheck, Maximize2, Minimize2, LogIn, LogOut as LogOutIcon, Trash2, History, X, Users2, Building2,
-  CheckCircle, ShieldAlert, UserPlus, Hand, Home, Image as ImageIcon
+  CheckCircle, ShieldAlert, UserPlus, Hand, Home, Image as ImageIcon,
+  Car
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { CONFIG } from "@/lib/config";
 
 interface Person {
   id: string;
   full_name: string;
   dni: string;
-  lote: string;
+  lote?: string;
+  category?: string;
+  employer?: string;
   email?: string;
   created_at?: string;
   status: string;
@@ -35,6 +39,15 @@ interface Person {
         lote: string;
     };
   };
+  isMaster?: boolean;
+  vehicle_patente?: string;
+  vehicle_modelo?: string;
+  vehicle_anio?: string;
+  vehicle_insurance_url?: string;
+  vehicle_insurance_back_url?: string;
+  work_insurance_url?: string;
+  dni_back_url?: string;
+  insurance_status?: string;
 }
 
 export default function GuardiaPortal() {
@@ -200,7 +213,7 @@ export default function GuardiaPortal() {
   const fetchPendingVisitors = async () => {
     const { data } = await supabase
       .from('visitor_records')
-      .select('id, full_name, dni, dni_front_url, selfie_url, status, invitations!inner(profiles!inner(lote))')
+      .select('id, full_name, dni, dni_front_url, dni_back_url, selfie_url, vehicle_patente, vehicle_modelo, vehicle_anio, vehicle_insurance_url, vehicle_insurance_back_url, work_insurance_url, insurance_status, status, invitation_id, invitations!inner(type, category, start_date, end_date, profiles!inner(lote))')
       .eq('status', 'pending');
     if (data) setPendingVisitors(data as any);
   };
@@ -215,7 +228,7 @@ export default function GuardiaPortal() {
     const { data, error } = await supabase
         .from('visitor_records')
         .select(`
-            id, full_name, dni, dni_front_url, selfie_url, status, updated_at, created_at, face_descriptor, role,
+            id, full_name, dni, dni_front_url, dni_back_url, selfie_url, vehicle_patente, vehicle_modelo, vehicle_anio, vehicle_insurance_url, vehicle_insurance_back_url, work_insurance_url, insurance_status, status, updated_at, created_at, face_descriptor, role,
             invitations!inner(id, expected_date, profiles!inner(id, lote, status))
         `)
         .gte('created_at', aDayAgo)
@@ -228,10 +241,25 @@ export default function GuardiaPortal() {
     
     if (data) {
       // SOLO mostramos en 'Invitados en Camino' los que ya fueron auditados (approved)
-      // Aseguramos que tengan role 'visitor' si no lo traen de la DB
       const processed = data.map((v: any) => ({ ...v, role: v.role || 'visitor' }));
-      setExpectedToday(processed.filter((v: any) => v.status === 'approved') as any);
-      setInsideNeighborhood(processed.filter((v: any) => v.status === 'inside') as any);
+      const currentInside = processed.filter((v: any) => v.status === 'inside');
+      
+      // Combinar con Trabajadores y Permanentes activos (Autorregistro para re-ingreso)
+      const { data: activeWorkers } = await supabase.from('trabajadores').select('*').eq('status', 'active');
+      const { data: activePerms } = await supabase.from('permanentes').select('*').eq('status', 'active');
+      
+      const identityPool = [
+        ...processed.filter((v: any) => v.status === 'approved'),
+        ...(activeWorkers || []).map(w => ({ ...w, role: 'worker', status: 'approved', isMaster: true, invitation_id: (w as any).invitation_id })),
+        ...(activePerms || []).filter(p => !p.end_date || new Date(p.end_date) >= new Date()).map(p => ({ ...p, role: 'permanent', status: 'approved', isMaster: true, invitation_id: (p as any).invitation_id }))
+      ];
+
+      // Filtrar los que ya están adentro (por DNI) para evitar duplicados en la lista de espera
+      const insideDnis = currentInside.map(v => v.dni);
+      const filteredExpected = identityPool.filter(v => !insideDnis.includes(v.dni));
+
+      setExpectedToday(filteredExpected as any);
+      setInsideNeighborhood(currentInside as any);
     }
   };
 
@@ -239,7 +267,7 @@ export default function GuardiaPortal() {
     // Optimización: Solo traer los últimos 30 registros para agilidad extrema
     const { data } = await supabase
         .from('visitor_records')
-        .select('*, invitations (expected_date, profiles(lote))')
+        .select('*, vehicle_patente, vehicle_modelo, vehicle_anio, vehicle_insurance_url, vehicle_insurance_back_url, work_insurance_url, insurance_status, invitations (expected_date, profiles(lote))')
         .order('updated_at', { ascending: false })
         .limit(30);
     if (data) setHistoryRecords(data as any);
@@ -264,15 +292,15 @@ export default function GuardiaPortal() {
     if (data) setPermanentes(data);
   };
 
-  // Disparar pre-carga cuando IA y Datos estén listos
+  // Disparar pre-carga cuando IA y Datos estÃ©n listos
   useEffect(() => {
       if (isFaceApiLoaded && (expectedToday.length > 0 || insideNeighborhood.length > 0 || allOwners.length > 0 || trabajadores.length > 0 || permanentes.length > 0)) {
-          const pool = [...expectedToday, ...insideNeighborhood, ...allOwners, ...trabajadores, ...permanentes];
+          const pool = [...expectedToday, ...insideNeighborhood, ...allOwners, ...trabajadores, ...permanentes] as any[];
           preloadDescriptors(pool);
       }
   }, [isFaceApiLoaded, expectedToday, insideNeighborhood, allOwners, trabajadores, permanentes]);
 
-  const preloadDescriptors = async (pool: Person[]) => {
+  const preloadDescriptors = async (pool: any[]) => {
       console.log("IA: Iniciando pre-carga instantánea para", pool.length, "entidades...");
       const newDescriptors: any[] = [];
       
@@ -303,7 +331,7 @@ export default function GuardiaPortal() {
                   // GUARDADO PERSISTENTE EN LA DB
                   if (v.role === 'owner') {
                       await supabase.from('profiles').update({ face_descriptor: Array.from(detection.descriptor) }).eq('id', v.id);
-                  } else if (v.role === 'worker' || v.category) {
+                  } else if (v.role === 'worker' || (v as any).category) { // FIX V6.2 DEPLOY
                       // Si es un trabajador (tienen categoría o el role explícito)
                       // Buscamos primero en trabajadores y luego en permanentes si no está (o viceversa)
                       // En el pool, si traemos el v.id, sabemos de qué tabla viene.
@@ -579,29 +607,77 @@ export default function GuardiaPortal() {
     await refreshAllData();
   };
 
+  const updateInsuranceStatus = async (id: string, newStatus: string, isMaster: boolean) => {
+    try {
+      const table = isMaster ? 'visitors' : 'visitor_records';
+      const { error } = await supabase.from(table).update({ insurance_status: newStatus }).eq('id', id);
+      if (error) throw error;
+      
+      // Update local state for immediate feedback
+      if (viewingAuth) setViewingAuth({ ...viewingAuth, insurance_status: newStatus });
+      await refreshAllData();
+    } catch (err: any) {
+      console.error("Error updating insurance status:", err.message);
+    }
+  };
+
   const handleStatusUpdate = async (id: string, newStatus: string, explicitInvId?: string) => {
-    const { data: recordData, error } = await supabase
-      .from('visitor_records')
-      .update({ 
-        status: newStatus,
-        ...(newStatus === 'inside' ? { entry_at: new Date().toISOString() } : {}),
-        ...(newStatus === 'completed' ? { exit_at: new Date().toISOString() } : {})
-      })
-      .eq('id', id)
-      .select('invitation_id')
-      .single();
+    try {
+      let recordData: any = null;
+      let error: any = null;
 
-    if (!error) {
-      // Usar either el ID explícito o el que devuelve el update
+      // Determinamos si es un registro existente o un Personal Maestro ingresando
+      const isMaster = expectedToday.find(v => v.id === id)?.isMaster || (newStatus === 'completed' && insideNeighborhood.find(v => v.id === id)?.role !== 'visitor');
+
+      if (isMaster && newStatus === 'inside') {
+        // FLUJO DE MASTER IDENTITY: NUEVO REGISTRO DE ENTRADA
+        const person = expectedToday.find(v => v.id === id);
+        if (!person) throw new Error("No se encontraron los datos de la persona para registrar el ingreso.");
+
+        const { data: newRecord, error: insError } = await supabase
+          .from('visitor_records')
+          .insert([{
+            full_name: person.full_name,
+            dni: person.dni,
+            selfie_url: person.selfie_url,
+            dni_front_url: person.dni_front_url,
+            face_descriptor: person.face_descriptor,
+            status: 'inside',
+            entry_at: new Date().toISOString(),
+            invitation_id: explicitInvId,
+            role: person.role
+          }])
+          .select('id, invitation_id')
+          .single();
+        
+        recordData = newRecord;
+        error = insError;
+      } else {
+        // FLUJO ESTÁNDAR O SALIDA: ACTUALIZACIÓN
+        const { data: updRecord, error: updError } = await supabase
+          .from('visitor_records')
+          .update({ 
+            status: newStatus,
+            ...(newStatus === 'inside' ? { entry_at: new Date().toISOString() } : {}),
+            ...(newStatus === 'completed' ? { exit_at: new Date().toISOString() } : {})
+          })
+          .eq('id', id)
+          .select('invitation_id')
+          .single();
+        
+        recordData = updRecord;
+        error = updError;
+      }
+
+      if (error) throw error;
+
+      // Sincronización redundante para el dueño
       const targetInvId = explicitInvId || recordData?.invitation_id;
-
-      // Sincronización redundante para el dueño (bypass RLS / asegurando marcador)
       if (targetInvId) {
         let statusMarker = "";
         if (newStatus === 'inside') statusMarker = " [INGRESÓ]";
         if (newStatus === 'completed') statusMarker = " [SALIÓ]";
         
-        // Obtenemos el nombre actual para no perderlo
         const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', targetInvId).single();
         if (currentInv) {
           const cleanName = currentInv.visitor_name.split(" [")[0];
@@ -611,8 +687,10 @@ export default function GuardiaPortal() {
         }
       }
       await refreshAllData();
-    } else {
-      alert("Error al actualizar estado: " + error.message);
+
+    } catch (err: any) {
+      console.error("Error en handleStatusUpdate:", err.message);
+      alert("Error al actualizar estado: " + err.message);
     }
   };
 
@@ -640,26 +718,94 @@ export default function GuardiaPortal() {
     } else if (data) {
       console.log("Registro de hoy aprobado:", data);
       
-      // 2. GUARDADO/ACTUALIZACIÓN EN BANCO DE IDENTIDADES PERMANENTE
-      const { dni, full_name, dni_front_url, selfie_url, face_descriptor } = data;
+      // 2. GUARDADO/ACTUALIZACIÓN EN BANCO DE IDENTIDADES MAESTRO Y SECTORES
+      const { 
+        dni, full_name, dni_front_url, dni_back_url, selfie_url, face_descriptor, invitation_id,
+        vehicle_patente, vehicle_modelo, vehicle_anio, vehicle_insurance_url, vehicle_insurance_back_url, 
+        work_insurance_url, insurance_status 
+      } = data;
       
+      // Siempre al Banco de Identidades Maestro
       const { error: upsertError } = await supabase
         .from('visitors')
         .upsert({
           dni,
           full_name: full_name.toUpperCase(),
           dni_front_url,
+          dni_back_url,
           selfie_url,
-          face_descriptor, // Sincronizar biometría detectada
-          status: 'approved'
+          vehicle_patente,
+          vehicle_modelo,
+          vehicle_anio,
+          vehicle_insurance_url,
+          vehicle_insurance_back_url,
+          work_insurance_url,
+          insurance_status,
+          status: 'active',
+          face_descriptor
         }, { onConflict: 'dni' });
 
+      // Routing basado en el tipo de invitación
+      const { data: invData } = await supabase
+        .from('invitations')
+        .select('type, category, start_date, end_date, profiles(full_name)')
+        .eq('id', invitation_id)
+        .single();
+
+      if (invData) {
+        if (invData.type === 'worker') {
+          await supabase.from('trabajadores').upsert({
+            dni,
+            full_name: full_name.toUpperCase(),
+            category: invData.category || 'SIN CATEGORÍA',
+            employer: (Array.isArray(invData.profiles) ? (invData.profiles as any)[0]?.full_name : (invData.profiles as any)?.full_name) || 'Particular',
+            status: 'active',
+            face_descriptor,
+            start_date: invData.start_date,
+            end_date: invData.end_date,
+            invitation_id: invitation_id,
+            dni_front_url,
+            dni_back_url,
+            selfie_url,
+            vehicle_patente,
+            vehicle_modelo,
+            vehicle_anio,
+            vehicle_insurance_url,
+            vehicle_insurance_back_url,
+            work_insurance_url,
+            insurance_status
+          }, { onConflict: 'dni' });
+        } else if (invData.type === 'permanent') {
+          await supabase.from('permanentes').upsert({
+            dni,
+            full_name: full_name.toUpperCase(),
+            category: 'Residente / Frecuente',
+            employer: (Array.isArray(invData.profiles) ? (invData.profiles as any)[0]?.full_name : (invData.profiles as any)?.full_name) || 'Particular',
+            status: 'active',
+            face_descriptor,
+            start_date: invData.start_date,
+            end_date: invData.end_date,
+            invitation_id: invitation_id,
+            dni_front_url,
+            dni_back_url,
+            selfie_url,
+            vehicle_patente,
+            vehicle_modelo,
+            vehicle_anio,
+            vehicle_insurance_url,
+            vehicle_insurance_back_url,
+            work_insurance_url,
+            insurance_status
+          }, { onConflict: 'dni' });
+        }
+      }
+
       // FIX SINCRONIZACIÓN ESTADO: Añadir [APROBADO] a la invitación para que el Propietario lo reciba.
-      if (data.invitation_id && !andEnter) {
-         const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', data.invitation_id).single();
+      if (invitation_id && !andEnter) {
+         const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', invitation_id).single();
          if (currentInv) {
            const cleanName = currentInv.visitor_name.split(" [")[0];
-           await supabase.from('invitations').update({ visitor_name: cleanName + " [APROBADO]" }).eq('id', data.invitation_id);
+           await supabase.from('invitations').update({ visitor_name: cleanName + " [APROBADO]" }).eq('id', invitation_id);
          }
       }
 
@@ -667,7 +813,7 @@ export default function GuardiaPortal() {
         console.error("Error al sincronizar con el Banco de Identidades:", upsertError);
         alert("Atención: Identidad aprobada para ingreso, pero falló el guardado permanente.");
       } else {
-        console.log("Banco de Identidades actualizado correctamente.");
+        console.log("Banco de Identidades y Sectores actualizados correctamente.");
       }
 
       setViewingAuth(null);
@@ -752,7 +898,7 @@ export default function GuardiaPortal() {
     
     const targetOwner = allOwners.find(o => o.lote === manualEntryLote);
     if (!targetOwner && manualEntryVisitor.role !== 'worker') {
-      alert("No se encontró un vecino activo para el lote indicado.");
+      alert("⚠️ No se encontró un vecino activo para el lote indicado.");
       setLoading(false);
       return;
     }
@@ -806,8 +952,28 @@ export default function GuardiaPortal() {
   const handleRejectVisitor = async (recordId: string) => {
     if (!confirm("¿Rechazar este registro de identidad?")) return;
     setLoading(true);
-    const { error } = await supabase.from('visitor_records').delete().eq('id', recordId);
+    
+    // 1. Marcar como rechazado en visitor_records (NO BORRAR)
+    const { data: recordData, error } = await supabase
+      .from('visitor_records')
+      .update({ status: 'rejected' })
+      .eq('id', recordId)
+      .select('invitation_id')
+      .single();
+
     if (!error) {
+      // 2. Sincronizar marcador en la invitación para el dueño
+      const targetInvId = recordData?.invitation_id;
+      if (targetInvId) {
+        const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', targetInvId).single();
+        if (currentInv) {
+          const cleanName = currentInv.visitor_name.split(" [")[0];
+          await supabase.from('invitations').update({ 
+            visitor_name: cleanName + " [RECHAZADO]" 
+          }).eq('id', targetInvId);
+        }
+      }
+      
       setViewingAuth(null);
       await refreshAllData();
     } else {
@@ -845,7 +1011,7 @@ export default function GuardiaPortal() {
     if (data) setVisitorHistory(data);
   };
 
-  const handleAnalizarBiometría = async () => {
+  const handleAnalizarBiometria = async () => {
     if (!viewingAuth?.selfie_url || !isFaceApiLoaded) return;
     setIsDetecting(true);
     try {
@@ -1021,7 +1187,9 @@ export default function GuardiaPortal() {
                         <img src={selectedVisitor.selfie_url || selectedVisitor.dni_front_url} className="w-16 h-16 rounded-[1.5rem] object-cover shadow-2xl ring-2 ring-emerald-500/20" alt="HUD" />
                         <div className="flex-1">
                             <h4 className="font-black uppercase text-base text-white leading-tight mb-0.5 tracking-tighter">{selectedVisitor.full_name}</h4>
-                            <p className="text-[10px] font-black uppercase text-emerald-400 tracking-[0.2em]">{selectedVisitor.role === 'owner' ? 'Vecino' : 'Visita'} • Lote {selectedVisitor.lote || selectedVisitor.invitations?.profiles?.lote}</p>
+                            <p className="text-[10px] font-black uppercase text-emerald-400 tracking-[0.2em]">
+                                {selectedVisitor.role === 'owner' ? 'Vecino' : (selectedVisitor.category || 'Visita')} • {selectedVisitor.lote || selectedVisitor.invitations?.profiles?.lote || selectedVisitor.employer || 'Acceso Fijo'}
+                            </p>
                         </div>
                         <div className="mr-2 p-3 bg-emerald-500/10 rounded-full text-emerald-500 shadow-inner">
                             <ShieldCheck className="w-6 h-6" />
@@ -1088,7 +1256,7 @@ export default function GuardiaPortal() {
                         <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center text-[8px] animate-pulse">!</span>
                     )}
                 </>
-              ) : tab === 'identidades' ? 'Invitados' : tab === 'trabajadores' ? 'Trabajadores' : tab === 'permanentes' ? 'Permanentes' : tab}
+              ) : tab === 'identidades' ? 'Identidades' : tab === 'trabajadores' ? 'Trabajadores' : tab === 'permanentes' ? 'Permanentes' : tab}
             </button>
           ))}
         </div>
@@ -1098,7 +1266,7 @@ export default function GuardiaPortal() {
                 <div className="bg-emerald-600/10 border border-emerald-500/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6">
                     <div>
                         <h3 className="text-xl font-black uppercase tracking-tighter mb-2">Escáner IA Inteligente</h3>
-                        <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Detecta automáticamente a cualquier invitado del día</p>
+                        <p className="text-emerald-500 text-[10px] font-black uppercase tracking-wide">✅ El visitante fue autorizado automáticamente usando sus datos biométricos previos.</p>
                     </div>
                     <button 
                         disabled={!isFaceApiLoaded}
@@ -1174,7 +1342,7 @@ export default function GuardiaPortal() {
                       <div key={v.id} className="bg-slate-900 border border-white/5 p-6 rounded-3xl flex items-center justify-between group">
                           <div>
                               <h4 className="font-black uppercase text-white mb-1 group-hover:text-red-400 transition-colors">{v.full_name}</h4>
-                              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">INGRESÓ A LAS {new Date(v.entry_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}hs</p>
+                              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">INGRESÓ A LAS {new Date(v.entry_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                           </div>
                           <div className="flex items-center gap-2">
                                      <button 
@@ -1278,37 +1446,98 @@ export default function GuardiaPortal() {
                     
                     <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Selfie Capturada</p>
-                            <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
-                                {viewingAuth.selfie_url ? (
-                                    <img src={viewingAuth.selfie_url} className="w-full h-full object-cover" alt="Selfie" />
-                                ) : (
-                                    <div className="flex flex-col items-center gap-2 opacity-20">
-                                        <Camera className="w-12 h-12" />
-                                        <p className="text-[8px] font-black uppercase tracking-widest">Sin Imagen</p>
+                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Documentación Capturada</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-2">
+                                    <p className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Selfie</p>
+                                    <div onClick={() => setZoomedImg(viewingAuth.selfie_url)} className="relative aspect-square rounded-2xl overflow-hidden border border-white/5 group bg-slate-950 flex items-center justify-center cursor-zoom-in">
+                                        {viewingAuth.selfie_url ? (
+                                            <img src={viewingAuth.selfie_url} className="w-full h-full object-cover" alt="Selfie" />
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-2 opacity-20"><Camera className="w-8 h-8" /></div>
+                                        )}
+                                        <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">DNI Frontal</p>
+                                    <div onClick={() => setZoomedImg(viewingAuth.dni_front_url)} className="relative aspect-square rounded-2xl overflow-hidden border border-white/5 group bg-slate-950 flex items-center justify-center cursor-zoom-in">
+                                        {viewingAuth.dni_front_url ? (
+                                            <img src={viewingAuth.dni_front_url} className="w-full h-full object-cover" alt="DNI" />
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-2 opacity-20"><ImageIcon className="w-8 h-8" /></div>
+                                        )}
+                                        <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                </div>
+                                
+                                {viewingAuth.vehicle_insurance_url && (
+                                    <div className="space-y-2">
+                                        <p className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Seguro Auto</p>
+                                        <div onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_url)} className="relative aspect-square rounded-2xl overflow-hidden border border-white/5 group bg-slate-950 flex items-center justify-center cursor-zoom-in">
+                                            <img src={viewingAuth.vehicle_insurance_url} className="w-full h-full object-cover" alt="Seguro Auto" />
+                                            <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </div>
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                {viewingAuth.work_insurance_url && (
+                                    <div className="space-y-2">
+                                        <p className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Seguro Trabajo</p>
+                                        <div onClick={() => setZoomedImg(viewingAuth.work_insurance_url)} className="relative aspect-square rounded-2xl overflow-hidden border border-white/5 group bg-slate-950 flex items-center justify-center cursor-zoom-in">
+                                            <img src={viewingAuth.work_insurance_url} className="w-full h-full object-cover" alt="Seguro Trabajo" />
+                                            <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        <div>
-                             <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Historial Reciente</p>
-                             <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                {visitorHistory.length > 0 ? visitorHistory.map(h => (
-                                    <div key={h.id} className="bg-white/5 border border-white/5 p-4 rounded-2xl">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <p className="text-[10px] font-black uppercase text-white">Lote {h.invitations?.profiles?.lote}</p>
-                                            <p className="text-[8px] font-black text-slate-500">{new Date(h.updated_at).toLocaleDateString('es-AR')}</p>
-                                        </div>
-                                        <p className="text-[9px] font-black uppercase text-emerald-500/70 tracking-widest">
-                                            {h.status === 'completed' ? 'Salida' : 'Ingreso'} • {new Date(h.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs
-                                        </p>
-                                    </div>
-                                )) : (
-                                    <div className="py-10 bg-white/5 rounded-2xl text-center border border-dashed border-white/5">
-                                        <p className="text-[9px] font-black uppercase text-slate-600 italic">No hay ingresos previos registrados</p>
-                                    </div>
-                                )}
+                        <div className="space-y-6">
+                             {/* Datos del Vehículo */}
+                             {viewingAuth.vehicle_patente && (
+                                 <div className="bg-white/5 border border-white/5 p-6 rounded-[2rem] space-y-4">
+                                     <div className="flex items-center gap-3">
+                                         <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
+                                             <Car className="w-5 h-5" />
+                                         </div>
+                                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Datos del Vehículo</p>
+                                     </div>
+                                     <div className="grid grid-cols-2 gap-4">
+                                         <div>
+                                             <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Patente</p>
+                                             <p className="text-xl font-black uppercase text-emerald-400">{viewingAuth.vehicle_patente}</p>
+                                         </div>
+                                         <div>
+                                             <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Año</p>
+                                             <p className="text-sm font-black uppercase text-white">{viewingAuth.vehicle_anio || 'N/A'}</p>
+                                         </div>
+                                     </div>
+                                     <div>
+                                         <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Modelo / Marca</p>
+                                         <p className="text-sm font-black uppercase text-white">{viewingAuth.vehicle_modelo || 'N/A'}</p>
+                                     </div>
+                                 </div>
+                             )}
+
+                             <div className="space-y-4">
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2">Historial Reciente</p>
+                                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                                   {visitorHistory.length > 0 ? visitorHistory.map(h => (
+                                       <div key={h.id} className="bg-white/5 border border-white/5 p-4 rounded-2xl">
+                                           <div className="flex justify-between items-center mb-1">
+                                               <p className="text-[10px] font-black uppercase text-white">Lote {h.invitations?.profiles?.lote}</p>
+                                               <p className="text-[8px] font-black text-slate-500">{new Date(h.updated_at).toLocaleDateString('es-AR')}</p>
+                                           </div>
+                                           <p className="text-[9px] font-black uppercase text-emerald-500/70 tracking-widest">
+                                               {h.status === 'completed' ? 'Salida' : 'Ingreso'} • {new Date(h.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs
+                                           </p>
+                                       </div>
+                                   )) : (
+                                       <div className="py-10 bg-white/5 rounded-2xl text-center border border-dashed border-white/5">
+                                           <p className="text-[9px] font-black uppercase text-slate-600 italic">No hay ingresos previos registrados</p>
+                                       </div>
+                                   )}
+                                </div>
                              </div>
                         </div>
                     </div>
@@ -1318,7 +1547,7 @@ export default function GuardiaPortal() {
                             {!viewingAuth.face_descriptor && (
                                 <button 
                                     disabled={isDetecting}
-                                    onClick={handleAnalizarBiometría}
+                                    onClick={handleAnalizarBiometria}
                                     className="px-6 py-3 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white rounded-2xl border border-blue-500/20 font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2"
                                 >
                                     {isDetecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
@@ -1466,8 +1695,8 @@ export default function GuardiaPortal() {
         {activeTab === 'identidades' && (
             <div className="space-y-8">
                 <div className="flex items-center justify-between mb-2 px-4">
-                  <h2 className="text-white font-black uppercase tracking-widest text-xs">Administración de Identidades</h2>
-                  <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Build v5.8</span>
+                  <h2 className="text-white font-black uppercase tracking-widest text-xs">Identidades</h2>
+                  <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Build v6.5</span>
                 </div>
                 <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] overflow-hidden">
 
@@ -1484,7 +1713,7 @@ export default function GuardiaPortal() {
                                 placeholder="BUSCAR POR NOMBRE O DNI..."
                                 value={identidadesSearch}
                                 onChange={(e) => setIdentidadesSearch(e.target.value)}
-                                Krank className="w-full bg-slate-900 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all"
+                                className="w-full bg-slate-900 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all"
                             />
                         </div>
                     </div>
@@ -1554,8 +1783,8 @@ export default function GuardiaPortal() {
         {activeTab === 'trabajadores' && (
             <div className="space-y-8">
                 <div className="flex items-center justify-between mb-2 px-4">
-                  <h2 className="text-white font-black uppercase tracking-widest text-xs">Administración de Trabajadores</h2>
-                  <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Build v6.0</span>
+                  <h2 className="text-white font-black uppercase tracking-widest text-xs">Trabajadores</h2>
+                  <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Build v6.5</span>
                 </div>
                 <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] overflow-hidden">
 
@@ -1600,8 +1829,13 @@ export default function GuardiaPortal() {
                                             <div className="min-w-0">
                                                 <h4 className={`font-black uppercase text-xs tracking-tight transition-colors truncate ${v.status === 'blocked' ? 'text-red-400' : 'text-white group-hover:text-emerald-400'}`}>{v.full_name}</h4>
                                                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest leading-none mt-1">
-                                                    DNI {v.dni} • {v.category || 'SIN CATEGORÍA'} {v.employer ? `• ${v.employer}` : ''}
+                                                    DNI {v.dni} • {v.category || 'SIN CATEGORÍA'} {v.employer ? `• AUTORIZADO POR: ${v.employer}` : ''}
                                                 </p>
+                                                {(v.start_date || v.end_date) && (
+                                                  <p className="text-[8px] text-emerald-500/70 font-black uppercase tracking-widest mt-1">
+                                                    VIGENCIA: {v.start_date ? new Date(v.start_date).toLocaleDateString() : '---'} AL {v.end_date ? new Date(v.end_date).toLocaleDateString() : '---'}
+                                                  </p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -1643,8 +1877,8 @@ export default function GuardiaPortal() {
         {activeTab === 'permanentes' && (
             <div className="space-y-8">
                 <div className="flex items-center justify-between mb-2 px-4">
-                  <h2 className="text-white font-black uppercase tracking-widest text-xs">Administración de Permanentes</h2>
-                  <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Build v6.1</span>
+                  <h2 className="text-white font-black uppercase tracking-widest text-xs">Permanentes</h2>
+                  <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Build v6.5</span>
                 </div>
                 <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] overflow-hidden">
 
@@ -1689,8 +1923,13 @@ export default function GuardiaPortal() {
                                             <div className="min-w-0">
                                                 <h4 className={`font-black uppercase text-xs tracking-tight transition-colors truncate ${v.status === 'blocked' ? 'text-red-400' : 'text-white group-hover:text-emerald-400'}`}>{v.full_name}</h4>
                                                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest leading-none mt-1">
-                                                    DNI {v.dni} • {v.category || 'SIN CATEGORÍA'} {v.employer ? `• ${v.employer}` : ''}
+                                                    DNI {v.dni} • {v.category || 'SIN CATEGORÍA'} {v.employer ? `• AUTORIZADO POR: ${v.employer}` : ''}
                                                 </p>
+                                                {(v.start_date || v.end_date) && (
+                                                  <p className="text-[8px] text-emerald-500/70 font-black uppercase tracking-widest mt-1">
+                                                    VIGENCIA: {v.start_date ? new Date(v.start_date).toLocaleDateString() : '---'} AL {v.end_date ? new Date(v.end_date).toLocaleDateString() : '---'}
+                                                  </p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -1796,7 +2035,7 @@ export default function GuardiaPortal() {
                             className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 border border-red-500/20"
                         >
                             <Trash2 className="w-3 h-3" />
-                            Limpiar Historial
+                            Limpiar Historial Finalizado
                         </button>
                     </div>
                     
@@ -1883,41 +2122,144 @@ export default function GuardiaPortal() {
                         <button onClick={() => { setViewingAuth(null); setVisitorHistory([]); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors"><X className="w-6 h-6" /></button>
                     </div>
                     
-                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                        <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-6">
+                            {/* DNI FRENTE */}
                             <div>
-                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Selfie Capturada</p>
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">DNI Frente</p>
+                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
+                                    {viewingAuth.dni_front_url ? (
+                                        <img src={viewingAuth.dni_front_url} className="w-full h-full object-cover" alt="DNI Frente" />
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-2 opacity-20"><ImageIcon className="w-10 h-10 text-slate-500" /></div>
+                                    )}
+                                    {viewingAuth.dni_front_url && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => setZoomedImg(viewingAuth.dni_front_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* DNI DORSO */}
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">DNI Dorso</p>
+                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
+                                    {viewingAuth.dni_back_url ? (
+                                        <img src={viewingAuth.dni_back_url} className="w-full h-full object-cover" alt="DNI Dorso" />
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-2 opacity-20"><ImageIcon className="w-10 h-10 text-slate-500" /></div>
+                                    )}
+                                    {viewingAuth.dni_back_url && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => setZoomedImg(viewingAuth.dni_back_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* SELFIE */}
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Selfie</p>
                                 <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
                                     {viewingAuth.selfie_url ? (
                                         <img src={viewingAuth.selfie_url} className="w-full h-full object-cover" alt="Selfie" />
                                     ) : (
-                                        <div className="flex flex-col items-center gap-2 opacity-20">
-                                            <Camera className="w-12 h-12" />
-                                            <p className="text-[8px] font-black uppercase tracking-widest">Sin Imagen</p>
+                                        <div className="flex flex-col items-center gap-2 opacity-20"><Camera className="w-10 h-10 text-slate-500" /></div>
+                                    )}
+                                    {viewingAuth.selfie_url && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => setZoomedImg(viewingAuth.selfie_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
                                         </div>
                                     )}
-                                    <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.selfie_url)} className="p-2 bg-emerald-500 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-4 h-4" /></button>
-                                    </div>
                                 </div>
                             </div>
+
+                            {/* SEGURO FRENTE */}
                             <div>
-                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Captura de DNI</p>
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Seguro Frente</p>
                                 <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
-                                    {viewingAuth.dni_front_url ? (
-                                        <img src={viewingAuth.dni_front_url} className="w-full h-full object-cover" alt="DNI" />
+                                    {viewingAuth.vehicle_insurance_url ? (
+                                        <img src={viewingAuth.vehicle_insurance_url} className="w-full h-full object-cover" alt="Seguro Frente" />
                                     ) : (
-                                        <div className="flex flex-col items-center gap-2 opacity-20">
-                                            <ImageIcon className="w-12 h-12 text-slate-500" />
-                                            <p className="text-[8px] font-black uppercase tracking-widest">Sin Imagen</p>
+                                        <div className="flex flex-col items-center gap-2 opacity-20"><ShieldCheck className="w-10 h-10 text-slate-500" /></div>
+                                    )}
+                                    {viewingAuth.vehicle_insurance_url && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
                                         </div>
                                     )}
-                                    <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.dni_front_url)} className="p-2 bg-emerald-500 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-4 h-4" /></button>
-                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SEGURO DORSO */}
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Seguro Dorso</p>
+                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
+                                    {viewingAuth.vehicle_insurance_back_url ? (
+                                        <img src={viewingAuth.vehicle_insurance_back_url} className="w-full h-full object-cover" alt="Seguro Dorso" />
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-2 opacity-20"><ShieldCheck className="w-10 h-10 text-slate-500" /></div>
+                                    )}
+                                    {viewingAuth.vehicle_insurance_back_url && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_back_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* ART */}
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Seguro ART</p>
+                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
+                                    {viewingAuth.work_insurance_url ? (
+                                        <img src={viewingAuth.work_insurance_url} className="w-full h-full object-cover" alt="ART" />
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-2 opacity-20"><Briefcase className="w-10 h-10 text-slate-500" /></div>
+                                    )}
+                                    {viewingAuth.work_insurance_url && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => setZoomedImg(viewingAuth.work_insurance_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
+
+                        {viewingAuth.vehicle_patente && (
+                            <div className="md:col-span-2 bg-slate-950/50 border border-white/10 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8">
+                                <div className="flex items-center gap-6">
+                                    <div className="p-5 bg-emerald-500/10 rounded-2xl text-emerald-500">
+                                        <Car className="w-10 h-10" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">Información del Vehículo</p>
+                                        <h4 className="text-2xl font-black uppercase text-white tracking-tighter leading-none">{viewingAuth.vehicle_modelo || '---'}</h4>
+                                        <p className="text-sm font-black text-emerald-500 tracking-[0.2em] mt-2">{viewingAuth.vehicle_patente} • Año {viewingAuth.vehicle_anio || '--'}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex flex-col items-center gap-3">
+                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Validación de Seguro (Guardia)</p>
+                                    <div className="flex p-1.5 bg-black/40 rounded-2xl border border-white/5 gap-2">
+                                        {[
+                                            {id: 'VIGENTE', color: 'bg-emerald-500', label: 'PAGO / VIGENTE'},
+                                            {id: 'IMPAGO', color: 'bg-amber-500', label: 'IMPAGO'},
+                                            {id: 'VENCIDO', color: 'bg-red-500', label: 'VENCIDO'}
+                                        ].map(s => (
+                                            <button 
+                                                key={s.id}
+                                                onClick={() => updateInsuranceStatus(viewingAuth.id, s.id, !!viewingAuth.isMaster)}
+                                                className={`px-4 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${viewingAuth.insurance_status === s.id ? `${s.color} text-white shadow-lg` : 'hover:bg-white/5 text-slate-500'}`}
+                                            >
+                                                {s.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="md:col-span-2">
                              <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Historial Reciente</p>
@@ -1951,7 +2293,7 @@ export default function GuardiaPortal() {
                             {!viewingAuth.face_descriptor && (
                                 <button 
                                     disabled={isDetecting}
-                                    onClick={handleAnalizarBiometría}
+                                    onClick={handleAnalizarBiometria}
                                     className="px-6 py-3 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white rounded-2xl border border-blue-500/20 font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2"
                                 >
                                     {isDetecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
@@ -2020,10 +2362,10 @@ export default function GuardiaPortal() {
                             <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest ml-4">Lote Destino</label>
                             <input 
                                 type="text"
-                                Krank value={manualEntryLote}
+                                value={manualEntryLote}
                                 onChange={(e) => setManualEntryLote(e.target.value)}
                                 placeholder="EJ: 114"
-                                className="w-full bg-slate-950 border border-white/5 rounded-2xl Krank Krank p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                className="w-full bg-slate-950 border border-white/5 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
                             />
                         </div>
                         <button 
@@ -2074,7 +2416,7 @@ export default function GuardiaPortal() {
                         <button 
                             onClick={handleSaveManualVisitor}
                             disabled={!newVisitor.dni || !newVisitor.full_name || loading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 Krank disabled:opacity-50 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             Guardar Identidad
@@ -2159,7 +2501,7 @@ export default function GuardiaPortal() {
         {isAddingPermanente && (
             <div className="fixed inset-0 z-[200] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
                 <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-[3.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
-                    <div className="p-10 Krank border-b border-white/5 bg-gradient-to-br from-emerald-500/10 to-transparent">
+                    <div className="p-10 border-b border-white/5 bg-gradient-to-br from-emerald-500/10 to-transparent">
                         <div className="flex items-center justify-between mb-2">
                              <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-400">
                                 <UserPlus className="w-6 h-6" />
@@ -2179,7 +2521,7 @@ export default function GuardiaPortal() {
                                     placeholder="EJ: ANA MARÍA"
                                     value={newPermanente.full_name}
                                     onChange={(e) => setNewPermanente({...newPermanente, full_name: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-950 border border-white/5 rounded-2xl Krank p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                    className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -2219,7 +2561,7 @@ export default function GuardiaPortal() {
 
                         <button 
                             onClick={handleAddPermanente}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 py-6 rounded-3xl Krank font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-3 mt-4"
+                            className="w-full bg-emerald-600 hover:bg-emerald-500 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-3 mt-4"
                         >
                             <Save className="w-5 h-5" />
                             Guardar Permanente
@@ -2228,6 +2570,35 @@ export default function GuardiaPortal() {
                 </div>
             </div>
         )}
+        
+        {/* MODAL DE ZOOM PARA DOCUMENTACIÓN */}
+        <AnimatePresence>
+            {zoomedImg && (
+                <div 
+                    className="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-300"
+                    onClick={() => setZoomedImg(null)}
+                >
+                    <motion.div 
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.9, opacity: 0 }}
+                        className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center"
+                    >
+                        <img 
+                            src={zoomedImg} 
+                            className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl" 
+                            alt="Zoom Document" 
+                        />
+                        <button 
+                            className="fixed top-8 right-8 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-all"
+                            onClick={() => setZoomedImg(null)}
+                        >
+                            <X className="w-8 h-8" />
+                        </button>
+                    </motion.div>
+                </div>
+            )}
+        </AnimatePresence>
     </div>
   );
 }
