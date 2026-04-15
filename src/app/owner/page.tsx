@@ -418,7 +418,7 @@ export default function OwnerDashboard() {
       .from("invitations")
       .insert([
           { 
-            visitor_name: invitationType === 'delivery' ? "DELIVERY" : "Invitado a Identificar", 
+            visitor_name: invitationType === 'delivery' ? `DELIVERY (${userProfile?.full_name})` : "Invitado a Identificar", 
             expected_date: (invitationType === 'permanent' || invitationType === 'worker' || invitationType === 'delivery') ? startDate : expectedDate, 
             owner_id: userProfile.id,
             type: invitationType,
@@ -689,7 +689,12 @@ export default function OwnerDashboard() {
                 ) : (
                   <>
                     <Plus className="w-6 h-6" /> 
-                    {invitationType === 'visit' ? 'Crear Visita' : invitationType === 'worker' ? 'Crear Acceso Laboral' : 'Crear Acceso Permanente'}
+                    {
+                      invitationType === 'visit' ? 'Crear Visita' : 
+                      invitationType === 'worker' ? 'Crear Acceso Laboral' : 
+                      invitationType === 'delivery' ? 'Crear Acceso Delivery' :
+                      'Crear Acceso Permanente'
+                    }
                   </>
                 )}
               </button>
