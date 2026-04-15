@@ -145,6 +145,7 @@ export default function GuardiaPortal() {
       await Promise.all([
         fetchApprovedVisitors(),
         fetchExpectedToday(),
+        fetchInsideNeighborhood(),
         fetchDeliveryInvitations()
       ]);
     } catch (e) { console.error("Error refreshing critical data:", e); }
@@ -298,14 +299,24 @@ export default function GuardiaPortal() {
     if (data) setApprovedVisitors(data);
   };
 
+  // Visitantes aprobados por la guardia que aún no ingresaron
   const fetchExpectedToday = async () => {
     const { data } = await supabase
-      .from('invitations')
-      .select('*, profiles(lote)')
-      .eq('expected_date', getLocalDate())
-      .neq('type', 'delivery')
-      .order('created_at', { ascending: false });
+      .from('visitor_records')
+      .select('*, invitations(id, expected_date, profiles(lote))')
+      .eq('status', 'approved')
+      .order('updated_at', { ascending: false });
     if (data) setExpectedToday(data as any);
+  };
+
+  // Personas actualmente dentro del barrio
+  const fetchInsideNeighborhood = async () => {
+    const { data } = await supabase
+      .from('visitor_records')
+      .select('*, invitations(id, expected_date, profiles(lote))')
+      .eq('status', 'inside')
+      .order('entry_at', { ascending: false });
+    if (data) setInsideNeighborhood(data as any);
   };
 
   const fetchDeliveryInvitations = async () => {
