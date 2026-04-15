@@ -144,17 +144,16 @@ export default function OwnerDashboard() {
         )
       }));
 
-      // FILTRO ULTRA-ESTRICTO:
-      // Solo mostramos la invitación si YA EXISTE un registro en visitor_records.
-      // O si el nombre NO es el marcador predeterminado (para casos manuales).
+      // FILTRO ROBUSTO: Solo mostrar si tiene registros biométricos O si el nombre NO es el placeholder
       const filteredData = sortedData.filter(inv => {
-        const hasRealRecords = inv.visitor_records && inv.visitor_records.length > 0;
+        const hasRecords = inv.visitor_records && inv.visitor_records.length > 0;
         const currentName = (inv.visitor_name || "").trim().toLowerCase();
         const pkgName = "invitado a identificar";
         
-        const isNotPlaceholder = currentName !== "" && currentName !== pkgName;
+        // Es placeholder si está vacío o si coincide con el texto genérico
+        const isPlaceholder = currentName === "" || currentName === pkgName;
         
-        return hasRealRecords || isNotPlaceholder;
+        return hasRecords || !isPlaceholder;
       });
 
       setActiveInvitations(filteredData);
@@ -397,7 +396,7 @@ export default function OwnerDashboard() {
     }
 
     // SI FALLA o NO EXISTE, abrimos la pantalla para compartir
-    alert(`⚠ No se encontraron registros de ${inv.visitor_name}. Compartile el enlace para su registro biométrico inicial.`);
+    alert(`⚠️ No se encontraron registros de ${inv.visitor_name}. Compartile el enlace para su registro biométrico inicial.`);
     const link = `${window.location.origin}/visitante/${inv.id}`;
     setInvitationLink(link);
     setSubmitting(false);
@@ -419,12 +418,12 @@ export default function OwnerDashboard() {
       .insert([
           { 
             visitor_name: "Invitado a Identificar", 
-            expected_date: invitationType === 'permanent' ? endDate : expectedDate, 
+            expected_date: (invitationType === 'permanent' || invitationType === 'worker') ? startDate : expectedDate, 
             owner_id: userProfile.id,
             type: invitationType,
             category: invitationType === 'worker' ? workerCategory : null,
-            start_date: invitationType === 'permanent' ? startDate : null,
-            end_date: invitationType === 'permanent' ? endDate : null
+            start_date: (invitationType === 'permanent' || invitationType === 'worker') ? startDate : null,
+            end_date: (invitationType === 'permanent' || invitationType === 'worker') ? endDate : null
           }
       ])
       .select()
@@ -537,7 +536,7 @@ export default function OwnerDashboard() {
              </h2>
              <p className="text-slate-500 text-sm mt-1">Genera una nueva invitación para acceder al barrio.</p>
            </div>
-           <span className="text-[9px] font-black uppercase text-slate-800 bg-emerald-500/5 px-3 py-1 rounded-full border border-white/5">Build v5.7</span>
+           <span className="text-[9px] font-black uppercase text-slate-800 bg-emerald-500/5 px-3 py-1 rounded-full border border-white/5">Build v6.5</span>
          </div>
 
         <div className="bg-slate-900/50 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-2xl overflow-hidden">
@@ -590,22 +589,45 @@ export default function OwnerDashboard() {
                 )}
 
                 {invitationType === 'worker' && (
-                  <div className="space-y-2 animate-in fade-in zoom-in-95 duration-300">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] ml-4">Rubro del Trabajador</label>
-                    <div className="relative">
-                      <Briefcase className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500 pointer-events-none" />
-                      <select 
-                        value={workerCategory}
-                        onChange={(e) => setWorkerCategory(e.target.value)}
-                        className="w-full bg-black/20 border border-white/5 rounded-2xl p-5 pl-14 text-sm font-black text-white appearance-none focus:border-emerald-500/50 outline-none transition-all"
-                      >
-                        {['Jardinero', 'Plomero', 'Electricista', 'Gasista', 'Piletero', 'Personal Doméstico', 'Otros'].map(cat => (
-                          <option key={cat} value={cat} className="bg-slate-900">{cat}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 pointer-events-none" />
+                  <>
+                    <div className="space-y-2 animate-in fade-in zoom-in-95 duration-300">
+                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] ml-4">Rubro del Trabajador</label>
+                      <div className="relative">
+                        <Briefcase className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500 pointer-events-none" />
+                        <select 
+                          value={workerCategory}
+                          onChange={(e) => setWorkerCategory(e.target.value)}
+                          className="w-full bg-black/20 border border-white/5 rounded-2xl p-5 pl-14 text-sm font-black text-white appearance-none focus:border-emerald-500/50 outline-none transition-all"
+                        >
+                          {['Jardinero', 'Plomero', 'Electricista', 'Gasista', 'Piletero', 'Personal Doméstico', 'Otros'].map(cat => (
+                            <option key={cat} value={cat} className="bg-slate-900">{cat}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 pointer-events-none" />
+                      </div>
                     </div>
-                  </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 animate-in fade-in zoom-in-95 duration-300">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Desde</label>
+                        <input 
+                          type="date" 
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-xs font-black text-white focus:border-emerald-500/50 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Hasta</label>
+                        <input 
+                          type="date" 
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-xs font-black text-white focus:border-emerald-500/50 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 {invitationType === 'permanent' && (
@@ -718,23 +740,34 @@ export default function OwnerDashboard() {
             <div className="grid grid-cols-1 gap-3">
                 {visibleInvitations.length > 0 ? (
                     visibleInvitations.map((inv) => {
-                            const rec = inv.visitor_records?.[0];
+                        const rec = inv.visitor_records?.[0];
                             
                             // Detección de estado por marcador redundante (Fix Sincronización)
                             let status = rec?.status || 'no_registered';
                             const invName = rec?.full_name || inv.visitor_name || "Invitado a Identificar";
                             
+                            // Lógica de Re-ingreso para Personas con Permanencia (Worker/Permanent)
+                            // Si alguien salió pero su pase sigue vigente, lo mostramos como "Por ingresar"
+                            const isTenure = inv.type === 'worker' || inv.type === 'permanent';
+                            const hasValidDates = !inv.end_date || new Date(inv.end_date) >= new Date(new Date().setHours(0,0,0,0));
+                            
                             if (status === 'no_registered') {
                                 if (invName.includes("[INGRESÓ]")) status = 'inside';
-                                else if (invName.includes("[SALIÓ]")) status = 'completed';
+                                else if (invName.includes("[SALIÓ]")) {
+                                    status = (isTenure && hasValidDates) ? 'approved' : 'completed';
+                                }
                                 else if (invName.includes("[APROBADO]")) status = 'approved';
-                                else if (invName.toLowerCase() !== "invitado a identificar" && inv.visitor_dni) status = 'pending';
+                                else if (invName.includes("[RECHAZADO]")) status = 'rejected';
+                                else if (invName !== "Invitado a Identificar" && inv.visitor_dni) status = 'pending';
+                            } else if (status === 'completed' && isTenure && hasValidDates) {
+                                status = 'approved';
                             }
                             
                             const cleanName = invName.replace(/ \[.*\]/, "");
-                            const initChar = cleanName.toLowerCase() !== "invitado a identificar" ? cleanName[0].toUpperCase() : "I";
+                            const initChar = cleanName !== "Invitado a Identificar" ? cleanName[0].toUpperCase() : "I";
                             const dniToShow = rec?.dni || inv.visitor_dni || "";
-                        
+                            
+                                
                         return (
                             <div key={inv.id} className="bg-slate-900 border border-white/5 p-5 rounded-[2rem] flex items-center justify-between group hover:border-emerald-500/20 transition-all">
                                 <div className="flex items-center gap-4">
@@ -747,19 +780,25 @@ export default function OwnerDashboard() {
                                     </div>
                                     <div>
                                         <h4 className="font-black uppercase text-xs text-white group-hover:text-emerald-400 transition-colors">
-                                            {cleanName}
-                                            {dniToShow && <span className="ml-2 text-slate-500 font-mono">[{dniToShow}]</span>}
+                                            {cleanName} <span className="text-slate-500 ml-1">DNI {dniToShow || "---"}</span>
                                         </h4>
+                                        <p className="text-[10px] font-black uppercase text-slate-500 mt-0.5 tracking-tight">
+                                            {inv.type === 'visit' ? 'VISITA' : inv.type === 'worker' ? 'TRABAJADOR' : 'PERMANENTE'}
+                                        </p>
                                         <div className="mt-2 flex items-center gap-2">
                                             {status === 'no_registered' && <span className="text-[8px] font-black uppercase text-slate-400 bg-slate-800/50 px-2 py-0.5 rounded border border-white/5">Esperando Registro</span>}
                                             {status === 'pending' && <span className="text-[8px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded animate-pulse">Registro Pendiente</span>}
                                             {status === 'approved' && <span className="text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Por ingresar al barrio</span>}
                                             {status === 'inside' && <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">Ingresó al barrio</span>}
                                             {status === 'completed' && <span className="text-[8px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded">Salió del barrio</span>}
-                                            {inv.type === 'permanent' && inv.end_date && new Date(inv.end_date) < new Date(new Date().setHours(0,0,0,0)) && (
+                                            {status === 'rejected' && <span className="text-[8px] font-black uppercase text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">Registro Rechazado</span>}
+
+                                            {isTenure && hasValidDates && (
+                                              <span className="text-[8px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Autorización Activa</span>
+                                            )}
+                                            {inv.end_date && new Date(inv.end_date) < new Date(new Date().setHours(0,0,0,0)) && (
                                                 <span className="text-[8px] font-black uppercase text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">Autorización Vencida</span>
                                             )}
-                                            {inv.type === 'worker' && <span className="text-[8px] font-black uppercase text-slate-500 bg-white/5 px-2 py-0.5 rounded border border-white/5">{inv.category || 'Trabajador'}</span>}
                                         </div>
                                     </div>
                                 </div>
@@ -769,7 +808,7 @@ export default function OwnerDashboard() {
                                           onClick={() => handleExpressAuthorization(inv)}
                                           disabled={submitting}
                                           className="p-3 bg-white/5 hover:bg-emerald-500 hover:text-white rounded-xl transition-all disabled:opacity-50"
-                                          title="Autorización Exprés / Compartir"
+                                          title="AutorizaciÃ³n ExprÃ©s / Compartir"
                                         >
                                             <Share2 className="w-4 h-4" />
                                         </button>
@@ -874,7 +913,7 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Cambiar Contraseña</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Cambiar ContraseÃ±a</label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
                       <input 
@@ -915,3 +954,4 @@ export default function OwnerDashboard() {
     </div>
   );
 }
+
