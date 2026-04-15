@@ -489,14 +489,14 @@ export default function VisitorPass() {
                     )}
                     {!selfiePhoto && !isCapturing && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                         <button onClick={startCamera} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 active:scale-95 transition-all">
+                         <button onClick={() => { setIsCapturingDni('selfie'); startCamera(); }} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 active:scale-95 transition-all">
                            <Camera className="w-4 h-4" /> Tomar Foto
                          </button>
                       </div>
                     )}
                     {selfiePhoto && !isCapturing && (
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                         <button onClick={startCamera} className="p-4 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-5 h-5" /></button>
+                         <button onClick={() => { setIsCapturingDni('selfie'); startCamera(); }} className="p-4 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-5 h-5" /></button>
                       </div>
                     )}
                   </div>
@@ -505,7 +505,7 @@ export default function VisitorPass() {
                     <button onClick={() => { stopCamera(); setStep(2); }} className="flex-1 bg-white/5 border border-white/5 py-5 rounded-2xl font-black text-[10px] uppercase text-slate-500">Volver</button>
                     {!selfiePhoto && !isCapturing ? (
                        <div className="flex-[2] flex gap-2">
-                         <button onClick={startCamera} className="flex-1 bg-emerald-600 py-5 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 px-2"><Camera className="w-4 h-4" /> Cámara</button>
+                         <button onClick={() => { setIsCapturingDni('selfie'); startCamera(); }} className="flex-1 bg-emerald-600 py-5 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 px-2"><Camera className="w-4 h-4" /> Cámara</button>
                          <label className="flex-1 bg-slate-800 py-5 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 cursor-pointer border border-white/5 px-2">
                            <ImageIcon className="w-4 h-4" /> Galería
                            <input type="file" accept="image/*" className="hidden" onChange={handleGalleryUpload} />
@@ -515,7 +515,7 @@ export default function VisitorPass() {
                        <button onClick={capturePhoto} className="flex-[2] bg-emerald-600 py-5 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 ring-4 ring-emerald-500/20">Capturar Rostro</button>
                     ) : (
                        <div className="flex-[2] flex gap-2">
-                          <button onClick={startCamera} className="flex-1 bg-amber-600 py-5 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2">Reintentar</button>
+                          <button onClick={() => { setIsCapturingDni('selfie'); startCamera(); }} className="flex-1 bg-amber-600 py-5 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2">Reintentar</button>
                           <label className="flex-1 bg-slate-800 py-5 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 cursor-pointer border border-white/5">
                             <ImageIcon className="w-4 h-4" /> Nueva
                             <input type="file" accept="image/*" className="hidden" onChange={handleGalleryUpload} />
