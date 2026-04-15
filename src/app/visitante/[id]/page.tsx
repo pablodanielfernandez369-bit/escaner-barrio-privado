@@ -475,7 +475,7 @@ export default function VisitorPass() {
                   </div>
 
                   <div className="w-56 h-56 bg-slate-950 rounded-full overflow-hidden border-4 border-emerald-500/30 relative flex items-center justify-center shadow-2xl group">
-                    {isCapturing && (isCapturingDni === 'selfie' || isCapturingDni === true) ? (
+                    {isCapturing && (isCapturingDni === 'selfie') ? (
                       <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                     ) : selfiePhoto ? (
                       <img src={selfiePhoto} className="w-full h-full object-cover scale-x-[-1]" alt="Selfie Preview" />
