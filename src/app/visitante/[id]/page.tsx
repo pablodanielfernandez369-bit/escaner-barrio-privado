@@ -397,13 +397,25 @@ export default function VisitorPass() {
                         ) : dniPhoto ? (
                           <img src={dniPhoto} className="w-full h-full object-cover" alt="DNI Frente" />
                         ) : (
-                          <div className="flex flex-col items-center gap-4 opacity-20">
-                            <ImageIcon className="w-8 h-8 text-white" />
+                          <div className="flex flex-col items-center gap-2">
+                             <div className="p-4 bg-emerald-500/10 rounded-full mb-2">
+                               <Camera className="w-8 h-8 text-emerald-500" />
+                             </div>
+                             <p className="text-[9px] font-black uppercase text-emerald-500 tracking-widest">Tocar para capturar</p>
                           </div>
                         )}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                           <button onClick={() => { setIsCapturingDni('front'); startCamera(); }} className="p-3 bg-emerald-500 rounded-full"><Camera className="w-4 h-4 text-white" /></button>
-                        </div>
+                        {!dniPhoto && !isCapturing && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                             <button onClick={() => { setIsCapturingDni('front'); startCamera(); }} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 active:scale-95 transition-all">
+                               <Camera className="w-4 h-4" /> Tomar Foto
+                             </button>
+                          </div>
+                        )}
+                        {dniPhoto && !isCapturing && (
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                             <button onClick={() => { setIsCapturingDni('front'); startCamera(); }} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Camera className="w-4 h-4" /></button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -415,13 +427,25 @@ export default function VisitorPass() {
                         ) : dniBackPhoto ? (
                           <img src={dniBackPhoto} className="w-full h-full object-cover" alt="DNI Dorso" />
                         ) : (
-                          <div className="flex flex-col items-center gap-4 opacity-20">
-                            <ImageIcon className="w-8 h-8 text-white" />
+                          <div className="flex flex-col items-center gap-2">
+                             <div className="p-4 bg-emerald-500/10 rounded-full mb-2">
+                               <Camera className="w-8 h-8 text-emerald-500" />
+                             </div>
+                             <p className="text-[9px] font-black uppercase text-emerald-500 tracking-widest">Tocar para capturar</p>
                           </div>
                         )}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                           <button onClick={() => { setIsCapturingDni('back'); startCamera(); }} className="p-3 bg-emerald-500 rounded-full"><Camera className="w-4 h-4 text-white" /></button>
-                        </div>
+                        {!dniBackPhoto && !isCapturing && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                             <button onClick={() => { setIsCapturingDni('back'); startCamera(); }} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 active:scale-95 transition-all">
+                               <Camera className="w-4 h-4" /> Tomar Foto
+                             </button>
+                          </div>
+                        )}
+                        {dniBackPhoto && !isCapturing && (
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                             <button onClick={() => { setIsCapturingDni('back'); startCamera(); }} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Camera className="w-4 h-4" /></button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -450,15 +474,29 @@ export default function VisitorPass() {
                     <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Selfie Biométrica</p>
                   </div>
 
-                  <div className="w-56 h-56 bg-slate-950 rounded-full overflow-hidden border-4 border-emerald-500/30 relative flex items-center justify-center shadow-2xl">
-                    {isCapturing ? (
+                  <div className="w-56 h-56 bg-slate-950 rounded-full overflow-hidden border-4 border-emerald-500/30 relative flex items-center justify-center shadow-2xl group">
+                    {isCapturing && (isCapturingDni === 'selfie' || isCapturingDni === true) ? (
                       <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
                     ) : selfiePhoto ? (
                       <img src={selfiePhoto} className="w-full h-full object-cover scale-x-[-1]" alt="Selfie Preview" />
                     ) : (
-                      <div className="flex flex-col items-center gap-4 opacity-20">
-                         <User className="w-12 h-12 text-white" />
-                         <p className="text-[10px] font-black uppercase tracking-widest text-white">Rostro</p>
+                      <div className="flex flex-col items-center gap-2">
+                         <div className="p-4 bg-emerald-500/10 rounded-full mb-1">
+                            <User className="w-10 h-10 text-emerald-500" />
+                         </div>
+                         <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Selfie</p>
+                      </div>
+                    )}
+                    {!selfiePhoto && !isCapturing && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                         <button onClick={startCamera} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 active:scale-95 transition-all">
+                           <Camera className="w-4 h-4" /> Tomar Foto
+                         </button>
+                      </div>
+                    )}
+                    {selfiePhoto && !isCapturing && (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                         <button onClick={startCamera} className="p-4 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-5 h-5" /></button>
                       </div>
                     )}
                   </div>
@@ -545,11 +583,23 @@ export default function VisitorPass() {
                                 ) : vehicleInsurancePhoto ? (
                                   <img src={vehicleInsurancePhoto} className="w-full h-full object-cover" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center"><Camera className="w-4 h-4 text-slate-700" /></div>
+                                  <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                                     <Camera className="w-6 h-6 text-slate-700" />
+                                     <p className="text-[8px] font-black text-slate-700 uppercase">Frente</p>
+                                  </div>
                                 )}
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                                   <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="p-2 bg-emerald-500 rounded-full text-white"><Camera className="w-3 h-3" /></button>
-                                </div>
+                                {!vehicleInsurancePhoto && !isCapturing && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                     <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="px-4 py-2 bg-emerald-500 text-white rounded-full font-black text-[8px] uppercase tracking-widest shadow-lg flex items-center gap-2">
+                                       <Camera className="w-3 h-3" /> Tomar Foto
+                                     </button>
+                                  </div>
+                                )}
+                                {vehicleInsurancePhoto && !isCapturing && (
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                                     <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="p-2 bg-emerald-500 rounded-full text-white shadow-md"><Camera className="w-3 h-3" /></button>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -561,11 +611,23 @@ export default function VisitorPass() {
                                 ) : vehicleInsuranceBackPhoto ? (
                                   <img src={vehicleInsuranceBackPhoto} className="w-full h-full object-cover" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center"><Camera className="w-4 h-4 text-slate-700" /></div>
+                                  <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                                     <Camera className="w-6 h-6 text-slate-700" />
+                                     <p className="text-[8px] font-black text-slate-700 uppercase">Dorso</p>
+                                  </div>
                                 )}
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                                   <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="p-2 bg-emerald-500 rounded-full text-white"><Camera className="w-3 h-3" /></button>
-                                </div>
+                                {!vehicleInsuranceBackPhoto && !isCapturing && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                     <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="px-4 py-2 bg-emerald-500 text-white rounded-full font-black text-[8px] uppercase tracking-widest shadow-lg flex items-center gap-2">
+                                       <Camera className="w-3 h-3" /> Tomar Foto
+                                     </button>
+                                  </div>
+                                )}
+                                {vehicleInsuranceBackPhoto && !isCapturing && (
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                                     <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="p-2 bg-emerald-500 rounded-full text-white shadow-md"><Camera className="w-3 h-3" /></button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -601,23 +663,30 @@ export default function VisitorPass() {
                           <div className="space-y-2">
                             <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest ml-4">Credencial / Póliza</label>
                             <div className="flex items-center gap-3">
-                              <div className="flex-[2] relative group">
-                                {isCapturing && isCapturingInsurance === 'work' ? (
-                                  <div className="w-full aspect-video bg-black rounded-xl overflow-hidden">
-                                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                                    <button onClick={capturePhoto} className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-blue-500 p-2 rounded-full shadow-lg"><Camera className="w-4 h-4 text-white" /></button>
-                                  </div>
-                                ) : workInsurancePhoto ? (
-                                  <div className="w-full aspect-video bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20 overflow-hidden relative">
-                                    <img src={workInsurancePhoto} className="w-full h-full object-cover" />
-                                    <button onClick={() => setWorkInsurancePhoto(null)} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-md"><X className="w-3 h-3 text-white" /></button>
-                                  </div>
-                                ) : (
-                                  <div className="w-full aspect-video bg-slate-900 rounded-xl flex items-center justify-center border border-white/5">
-                                    <ImageIcon className="w-6 h-6 text-slate-700" />
-                                  </div>
-                                )}
-                              </div>
+                                <div className="flex-[2] relative group aspect-video">
+                                  {isCapturing && isCapturingInsurance === 'work' ? (
+                                    <div className="w-full h-full bg-black rounded-xl overflow-hidden">
+                                      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                                      <button onClick={capturePhoto} className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-blue-500 p-2 rounded-full shadow-lg"><Camera className="w-4 h-4 text-white" /></button>
+                                    </div>
+                                  ) : workInsurancePhoto ? (
+                                    <div className="w-full h-full bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20 overflow-hidden relative">
+                                      <img src={workInsurancePhoto} className="w-full h-full object-cover" />
+                                      <button onClick={() => setWorkInsurancePhoto(null)} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-md"><X className="w-3 h-3 text-white" /></button>
+                                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                                         <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="p-3 bg-blue-500 rounded-full text-white shadow-lg"><Camera className="w-4 h-4" /></button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="w-full h-full bg-slate-900 rounded-xl flex flex-col items-center justify-center border border-white/5 gap-2">
+                                      <Camera className="w-6 h-6 text-slate-700" />
+                                      <p className="text-[8px] font-black text-slate-700 uppercase">Certificado ART</p>
+                                      <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-full font-black text-[8px] uppercase tracking-widest shadow-lg flex items-center gap-2">
+                                        <Camera className="w-3 h-3" /> Tomar Foto
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               <div className="flex-1 flex flex-col gap-2">
                                 <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="p-3 bg-blue-600 rounded-xl text-white flex items-center justify-center gap-2"><Camera className="w-4 h-4" /></button>
                                 <label className="p-3 bg-slate-800 rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer"><ImageIcon className="w-4 h-4" /><input type="file" accept="image/*" className="hidden" onChange={(e) => { setIsCapturingInsurance('work'); handleGalleryUpload(e); }} /></label>

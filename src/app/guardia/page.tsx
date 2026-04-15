@@ -80,7 +80,7 @@ export default function GuardiaPortal() {
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const isScanningContinuous = useRef(false);
 
-  // BiometrÃ­a States
+  // Biometría States
   const [faceapi, setFaceapi] = useState<any>(null);
   const [isFaceApiLoaded, setIsFaceApiLoaded] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
@@ -189,10 +189,10 @@ export default function GuardiaPortal() {
     
     checkUser();
     
-    // CANAL CRÃTICO (10s): Accesos y monitoreo en tiempo real
+    // CANAL CRÍTICO (10s): Accesos y monitoreo en tiempo real
     const criticalInterval = setInterval(refreshCriticalData, 10000);
 
-    // CANAL DE GESTIÃ“N (5 min): Historial, dueÃ±os y configuraciones (Optimizado)
+    // CANAL DE GESTIÓN (5 min): Historial, dueños y configuraciones (Optimizado)
     const mgmtInterval = setInterval(refreshManagementData, 300000);
 
     return () => {
@@ -231,7 +231,7 @@ export default function GuardiaPortal() {
       setIsCapturingManual(true);
       if (videoRef.current) videoRef.current.srcObject = s;
     } catch (err) {
-      console.error("Error al iniciar cÃ¡mara manual:", err);
+      console.error("Error al iniciar cámara manual:", err);
       // Fallback
       try {
         const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -240,7 +240,7 @@ export default function GuardiaPortal() {
         setIsCapturingManual(true);
         if (videoRef.current) videoRef.current.srcObject = s;
       } catch (e) {
-        alert("No se pudo acceder a la cÃ¡mara.");
+        alert("No se pudo acceder a la cámara.");
       }
     }
   };
@@ -320,7 +320,7 @@ export default function GuardiaPortal() {
 
   const handleIncrementDeliveryCount = async (invId: string, currentCount: number, maxQty: number) => {
     if (currentCount >= maxQty) {
-      alert("Este pase de delivery ya alcanzÃ³ el lÃ­mite de ingresos autorizados.");
+      alert("Este pase de delivery ya alcanzó el límite de ingresos autorizados.");
       return;
     }
 
@@ -367,7 +367,7 @@ export default function GuardiaPortal() {
         ...(activePerms || []).filter(p => !p.end_date || new Date(p.end_date) >= new Date()).map(p => ({ ...p, role: 'permanent', status: 'approved', isMaster: true, invitation_id: (p as any).invitation_id }))
       ];
 
-      // Filtrar los que ya estÃ¡n adentro (por DNI) para evitar duplicados en la lista de espera
+      // Filtrar los que ya están adentro (por DNI) para evitar duplicados en la lista de espera
       const insideDnis = currentInside.map(v => v.dni);
       const filteredExpected = identityPool.filter(v => !insideDnis.includes(v.dni));
 
@@ -377,7 +377,7 @@ export default function GuardiaPortal() {
   };
 
   const fetchHistory = async () => {
-    // OptimizaciÃ³n: Solo traer los Ãºltimos 30 registros para agilidad extrema
+    // Optimización: Solo traer los últimos 30 registros para agilidad extrema
     const { data } = await supabase
         .from('visitor_records')
         .select('*, vehicle_patente, vehicle_modelo, vehicle_anio, vehicle_insurance_url, vehicle_insurance_back_url, work_insurance_url, insurance_status, invitations (expected_date, profiles(lote))')
@@ -405,7 +405,7 @@ export default function GuardiaPortal() {
     if (data) setPermanentes(data);
   };
 
-  // Disparar pre-carga cuando IA y Datos estÃƒÂ©n listos
+  // Disparar pre-carga cuando IA y Datos estÃ©n listos
   useEffect(() => {
       if (isFaceApiLoaded && (expectedToday.length > 0 || insideNeighborhood.length > 0 || allOwners.length > 0 || trabajadores.length > 0 || permanentes.length > 0)) {
           const pool = [...expectedToday, ...insideNeighborhood, ...allOwners, ...trabajadores, ...permanentes] as any[];
@@ -414,12 +414,12 @@ export default function GuardiaPortal() {
   }, [isFaceApiLoaded, expectedToday, insideNeighborhood, allOwners, trabajadores, permanentes]);
 
   const preloadDescriptors = async (pool: any[]) => {
-      console.log("IA: Iniciando pre-carga instantÃ¡nea para", pool.length, "entidades...");
+      console.log("IA: Iniciando pre-carga instantánea para", pool.length, "entidades...");
       const newDescriptors: any[] = [];
       
       for (const v of pool) {
           try {
-              // PRIORIDAD 1: Usar el descriptor ya guardado en la DB (InstantÃ¡neo)
+              // PRIORIDAD 1: Usar el descriptor ya guardado en la DB (Instantáneo)
               if (v.face_descriptor) {
                   const descriptorArray = new Float32Array(Object.values(v.face_descriptor));
                   newDescriptors.push(new faceapi.LabeledFaceDescriptors(v.id, [descriptorArray]));
@@ -445,10 +445,10 @@ export default function GuardiaPortal() {
                   if (v.role === 'owner') {
                       await supabase.from('profiles').update({ face_descriptor: Array.from(detection.descriptor) }).eq('id', v.id);
                   } else if (v.role === 'worker' || (v as any).category) { // FIX V6.2 DEPLOY
-                      // Si es un trabajador (tienen categorÃ­a o el role explÃ­cito)
-                      // Buscamos primero en trabajadores y luego en permanentes si no estÃ¡ (o viceversa)
-                      // En el pool, si traemos el v.id, sabemos de quÃ© tabla viene.
-                      // Para simplificar, probamos en ambas o aÃ±adimos el role al pool.
+                      // Si es un trabajador (tienen categoría o el role explícito)
+                      // Buscamos primero en trabajadores y luego en permanentes si no está (o viceversa)
+                      // En el pool, si traemos el v.id, sabemos de qué tabla viene.
+                      // Para simplificar, probamos en ambas o añadimos el role al pool.
                       
                       const isPermanente = permanentes.some(p => p.id === v.id);
                       if (isPermanente) {
@@ -487,7 +487,7 @@ export default function GuardiaPortal() {
   }, [cameraActive, activeStream]);
 
   const startCamera = async (fullMode = false, visitor: Person | null = null, isSmart = false) => {
-    setScanResult({match: null, distance: 0, error: "Conectando cÃ¡mara..."});
+    setScanResult({match: null, distance: 0, error: "Conectando cámara..."});
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
@@ -523,7 +523,7 @@ export default function GuardiaPortal() {
             setActiveStream(stream);
             setCameraActive(true);
         } catch (e2) {
-            alert("No se pudo acceder a la cÃ¡mara.");
+            alert("No se pudo acceder a la cámara.");
         }
     }
   };
@@ -570,13 +570,13 @@ export default function GuardiaPortal() {
     if (!videoRef.current || !isFaceApiLoaded) return;
     setScanThinking(true);
     try {
-      // Usar Tiny para verificaciÃ³n puntual si se busca velocidad, o SSD para precisiÃ³n
+      // Usar Tiny para verificación puntual si se busca velocidad, o SSD para precisión
       const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 }))
         .withFaceLandmarks()
         .withFaceDescriptor();
       
       if (!detection) {
-          setScanResult({ match: null, distance: 0, error: "No se detecta rostro. Intenta acercarte mÃ¡s." });
+          setScanResult({ match: null, distance: 0, error: "No se detecta rostro. Intenta acercarte más." });
           return;
       }
       
@@ -592,7 +592,7 @@ export default function GuardiaPortal() {
       const match = distance < 0.58; // Umbral optimizado
       setScanResult({ match, distance, error: match ? null : "Identidad dudosa. Verifique DNI." });
     } catch (e) { 
-        setScanResult({ match: null, distance: 0, error: "Error en sensor biomÃ©trico." });
+        setScanResult({ match: null, distance: 0, error: "Error en sensor biométrico." });
     }
     finally { setScanThinking(false); }
   };
@@ -601,7 +601,7 @@ export default function GuardiaPortal() {
     if (!videoRef.current || !canvasRef.current || !isFaceApiLoaded || !isScanningContinuous.current) return false;
     
     try {
-      // Volver a TinyFaceDetector para que el loop sea instantÃ¡neo en mÃ³viles
+      // Volver a TinyFaceDetector para que el loop sea instantáneo en móviles
       const liveDetection = await faceapi.detectSingleFace(
           videoRef.current, 
           new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 })
@@ -620,14 +620,14 @@ export default function GuardiaPortal() {
 
       if (!liveDetection) return false;
 
-      // Dibujar feedback de detecciÃ³n
+      // Dibujar feedback de detección
       if (ctx) {
           const { x, y, width, height } = liveDetection.detection.box;
           ctx.strokeStyle = '#10b981';
           ctx.lineWidth = 4;
           ctx.strokeRect(x, y, width, height);
           
-          // Esquinas estÃ©ticas
+          // Esquinas estéticas
           ctx.fillStyle = '#10b981';
           const cornerSize = 20;
           ctx.fillRect(x-2, y-2, cornerSize, 6);
@@ -659,18 +659,18 @@ export default function GuardiaPortal() {
               
               isScanningContinuous.current = false;
               
-              // REGISTRAMOS LA ACCIÃ“N AUTOMÃTICAMENTE
+              // REGISTRAMOS LA ACCIÓN AUTOMÁTICAMENTE
               if (isResident) {
                   // Para residentes solo logueamos o actualizamos un flag si fuera necesario
                   console.log("IA: Residente detectado. Autorizando paso...");
-                  // PodrÃ­amos llamar a handleStatusUpdate si adaptamos la DB para residentes
+                  // Podríamos llamar a handleStatusUpdate si adaptamos la DB para residentes
                   if (window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
               } else {
                   handleStatusUpdate(found.id, nextStatus, (found as any).invitations?.id);
                   if (window.navigator.vibrate) window.navigator.vibrate(100);
               }
 
-              // AUTOCIERRE DE CÃMARA TRAS FEEDBACK
+              // AUTOCIERRE DE CÁMARA TRAS FEEDBACK
               setTimeout(() => {
                   stopCamera();
                   refreshAllData();
@@ -696,7 +696,7 @@ export default function GuardiaPortal() {
   };
 
   const handleDeleteRecord = async (id: string) => {
-    // Eliminada confirmaciÃ³n nativa para evitar bloqueos del navegador
+    // Eliminada confirmación nativa para evitar bloqueos del navegador
     console.log("Iniciando borrado de registro de acceso:", id);
     setExpectedToday(prev => prev.filter(v => v.id !== id));
     setInsideNeighborhood(prev => prev.filter(v => v.id !== id));
@@ -766,7 +766,7 @@ export default function GuardiaPortal() {
         recordData = newRecord;
         error = insError;
       } else {
-        // FLUJO ESTÃNDAR O SALIDA: ACTUALIZACIÃ“N
+        // FLUJO ESTÁNDAR O SALIDA: ACTUALIZACIÓN
         const { data: updRecord, error: updError } = await supabase
           .from('visitor_records')
           .update({ 
@@ -784,12 +784,12 @@ export default function GuardiaPortal() {
 
       if (error) throw error;
 
-      // SincronizaciÃ³n redundante para el dueÃ±o
+      // Sincronización redundante para el dueño
       const targetInvId = explicitInvId || recordData?.invitation_id;
       if (targetInvId) {
         let statusMarker = "";
-        if (newStatus === 'inside') statusMarker = " [INGRESÃ“]";
-        if (newStatus === 'completed') statusMarker = " [SALIÃ“]";
+        if (newStatus === 'inside') statusMarker = " [INGRESÓ]";
+        if (newStatus === 'completed') statusMarker = " [SALIÓ]";
         
         const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', targetInvId).single();
         if (currentInv) {
@@ -831,7 +831,7 @@ export default function GuardiaPortal() {
     } else if (data) {
       console.log("Registro de hoy aprobado:", data);
       
-      // 2. GUARDADO/ACTUALIZACIÃ“N EN BANCO DE IDENTIDADES MAESTRO Y SECTORES
+      // 2. GUARDADO/ACTUALIZACIÓN EN BANCO DE IDENTIDADES MAESTRO Y SECTORES
       const { 
         dni, full_name, dni_front_url, dni_back_url, selfie_url, face_descriptor, invitation_id,
         vehicle_patente, vehicle_modelo, vehicle_anio, vehicle_insurance_url, vehicle_insurance_back_url, 
@@ -858,7 +858,7 @@ export default function GuardiaPortal() {
           face_descriptor
         }, { onConflict: 'dni' });
 
-      // Routing basado en el tipo de invitaciÃ³n
+      // Routing basado en el tipo de invitación
       const { data: invData } = await supabase
         .from('invitations')
         .select('type, category, start_date, end_date, profiles(full_name)')
@@ -870,7 +870,7 @@ export default function GuardiaPortal() {
           await supabase.from('trabajadores').upsert({
             dni,
             full_name: full_name.toUpperCase(),
-            category: invData.category || 'SIN CATEGORÃA',
+            category: invData.category || 'SIN CATEGORÍA',
             employer: (Array.isArray(invData.profiles) ? (invData.profiles as any)[0]?.full_name : (invData.profiles as any)?.full_name) || 'Particular',
             status: 'active',
             face_descriptor,
@@ -913,7 +913,7 @@ export default function GuardiaPortal() {
         }
       }
 
-      // FIX SINCRONIZACIÃ“N ESTADO: AÃ±adir [APROBADO] a la invitaciÃ³n para que el Propietario lo reciba.
+      // FIX SINCRONIZACIÓN ESTADO: Añadir [APROBADO] a la invitación para que el Propietario lo reciba.
       if (invitation_id && !andEnter) {
          const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', invitation_id).single();
          if (currentInv) {
@@ -924,7 +924,7 @@ export default function GuardiaPortal() {
 
       if (upsertError) {
         console.error("Error al sincronizar con el Banco de Identidades:", upsertError);
-        alert("AtenciÃ³n: Identidad aprobada para ingreso, pero fallÃ³ el guardado permanente.");
+        alert("Atención: Identidad aprobada para ingreso, pero falló el guardado permanente.");
       } else {
         console.log("Banco de Identidades y Sectores actualizados correctamente.");
       }
@@ -936,7 +936,7 @@ export default function GuardiaPortal() {
   };
 
   const handleDeleteVisitor = async (dni: string) => {
-    if (!confirm("Â¿Eliminar este visitante y TODO su historial de forma permanente?")) return;
+    if (!confirm("¿Eliminar este visitante y TODO su historial de forma permanente?")) return;
     setLoading(true);
     
     // 1. Borramos rastro del historial (vacia lo que corresponda a esa persona)
@@ -954,7 +954,7 @@ export default function GuardiaPortal() {
   };
 
   const handleClearHistory = async () => {
-    if (!confirm("Â¿EstÃ¡s seguro de que quieres borrar TODO el historial de registros finalizados?")) return;
+    if (!confirm("¿Estás seguro de que quieres borrar TODO el historial de registros finalizados?")) return;
     setLoading(true);
     
     try {
@@ -977,7 +977,7 @@ export default function GuardiaPortal() {
   };
 
   const handleDeleteHistoryRecord = async (recordId: string, dni: string) => {
-    if (!confirm("Â¿Eliminar este registro especÃ­fico del historial?")) return;
+    if (!confirm("¿Eliminar este registro específico del historial?")) return;
     setLoading(true);
     try {
       // Intentar borrar el registro por ID
@@ -988,13 +988,13 @@ export default function GuardiaPortal() {
       
       if (delError) throw delError;
 
-      // Parche v5.8 Purga AtÃ³mica para Palacios (DNI persistente)
+      // Parche v5.8 Purga Atómica para Palacios (DNI persistente)
       if (dni === '35264897' || dni.includes('35264897')) {
-         console.log("IA: Iniciando Purga AtÃ³mica de Palacios...");
+         console.log("IA: Iniciando Purga Atómica de Palacios...");
          await supabase.from('visitor_records').delete().eq('dni', '35264897');
          await supabase.from('invitations').delete().eq('visitor_dni', '35264897');
          await supabase.from('visitors').delete().eq('dni', '35264897');
-         alert("IA: Purga AtÃ³mica completada. El registro deberÃ­a desaparecer tras el refresco.");
+         alert("IA: Purga Atómica completada. El registro debería desaparecer tras el refresco.");
       }
 
       await refreshAllData();
@@ -1011,19 +1011,19 @@ export default function GuardiaPortal() {
     
     const targetOwner = allOwners.find(o => o.lote === manualEntryLote);
     if (!targetOwner && manualEntryVisitor.role !== 'worker') {
-      alert("âš ï¸ No se encontrÃ³ un vecino activo para el lote indicado.");
+      alert("⚠️ No se encontró un vecino activo para el lote indicado.");
       setLoading(false);
       return;
     }
 
     try {
       let invId = null;
-      // Solo creamos invitaciÃ³n huÃ©rfana si NO es trabajador
+      // Solo creamos invitación huérfana si NO es trabajador
       if (manualEntryVisitor.role !== 'worker') {
         const { data: inv, error: invErr } = await supabase
           .from('invitations')
           .insert([{ 
-              visitor_name: manualEntryVisitor.full_name + " [INGRESÃ“]", 
+              visitor_name: manualEntryVisitor.full_name + " [INGRESÓ]", 
               visitor_dni: manualEntryVisitor.dni,
               expected_date: getLocalDate(),
               owner_id: targetOwner?.id 
@@ -1063,7 +1063,7 @@ export default function GuardiaPortal() {
   };
 
   const handleRejectVisitor = async (recordId: string) => {
-    if (!confirm("Â¿Rechazar este registro de identidad?")) return;
+    if (!confirm("¿Rechazar este registro de identidad?")) return;
     setLoading(true);
     
     // 1. Marcar como rechazado en visitor_records (NO BORRAR)
@@ -1075,7 +1075,7 @@ export default function GuardiaPortal() {
       .single();
 
     if (!error) {
-      // 2. Sincronizar marcador en la invitaciÃ³n para el dueÃ±o
+      // 2. Sincronizar marcador en la invitación para el dueño
       const targetInvId = recordData?.invitation_id;
       if (targetInvId) {
         const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', targetInvId).single();
@@ -1146,7 +1146,7 @@ export default function GuardiaPortal() {
         alert("No se pudo detectar un rostro claro en la selfie. Intente pedir una foto mejor.");
       }
     } catch (e) {
-      console.error("Error analizando biometrÃ­a:", e);
+      console.error("Error analizando biometría:", e);
     } finally {
       setIsDetecting(false);
     }
@@ -1155,7 +1155,7 @@ export default function GuardiaPortal() {
 
   const handleUpdateGuardPassword = async () => {
     if (!newPassword || newPassword !== confirmPassword) {
-      alert("Las contraseÃ±as no coinciden o estÃ¡n vacÃ­as");
+      alert("Las contraseñas no coinciden o están vacías");
       return;
     }
 
@@ -1164,7 +1164,7 @@ export default function GuardiaPortal() {
       const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
       if (authError) throw authError;
 
-      alert("ContraseÃ±a de guardia actualizada correctamente");
+      alert("Contraseña de guardia actualizada correctamente");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: any) {
@@ -1218,7 +1218,7 @@ export default function GuardiaPortal() {
   };
 
   const handleDeleteTrabajador = async (id: string) => {
-    if (!window.confirm("Â¿EstÃ¡ seguro de eliminar este trabajador permanente?")) return;
+    if (!window.confirm("¿Está seguro de eliminar este trabajador permanente?")) return;
     const { error } = await supabase.from('trabajadores').delete().eq('id', id);
     if (!error) await fetchTrabajadores();
     else alert("Error: " + error.message);
@@ -1265,7 +1265,7 @@ export default function GuardiaPortal() {
   };
 
   const handleDeletePermanente = async (id: string) => {
-    if (!window.confirm("Â¿EstÃ¡ seguro de eliminar este registro permanente?")) return;
+    if (!window.confirm("¿Está seguro de eliminar este registro permanente?")) return;
     const { error } = await supabase.from('permanentes').delete().eq('id', id);
     if (!error) await fetchPermanentes();
     else alert("Error: " + error.message);
@@ -1273,7 +1273,7 @@ export default function GuardiaPortal() {
 
   const handleUpdateGuardName = async () => {
     if (!newGuardUsername || newGuardUsername !== confirmGuardUsername) {
-      alert("Los nombres de usuario no coinciden o estÃ¡n vacÃ­os");
+      alert("Los nombres de usuario no coinciden o están vacíos");
       return;
     }
 
@@ -1322,13 +1322,13 @@ export default function GuardiaPortal() {
             
             <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-10" />
 
-            {/* Overlay EstÃ©tico HUD (HUD es "Heads-Up Display") */}
+            {/* Overlay Estético HUD (HUD es "Heads-Up Display") */}
             <div className="absolute inset-0 z-20 pointer-events-none">
                 <div className="absolute inset-0 border-[20px] border-black/10" />
                 <div className="scanning-line" />
             </div>
 
-            {/* HUD Centralizado de InformaciÃ³n de Usuario */}
+            {/* HUD Centralizado de Información de Usuario */}
             {selectedVisitor && (
                 <div className="absolute bottom-12 inset-x-6 z-50 animate-in slide-in-from-bottom-12 duration-500">
                     <div className="max-w-sm mx-auto p-4 bg-slate-900/40 backdrop-blur-[30px] rounded-[2.5rem] border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.8)] flex items-center gap-5 ring-1 ring-white/5">
@@ -1336,7 +1336,7 @@ export default function GuardiaPortal() {
                         <div className="flex-1">
                             <h4 className="font-black uppercase text-base text-white leading-tight mb-0.5 tracking-tighter">{selectedVisitor.full_name}</h4>
                             <p className="text-[10px] font-black uppercase text-emerald-400 tracking-[0.2em]">
-                                {selectedVisitor.role === 'owner' ? 'Vecino' : (selectedVisitor.category || 'Visita')} â€¢ {selectedVisitor.lote || selectedVisitor.invitations?.profiles?.lote || selectedVisitor.employer || 'Acceso Fijo'}
+                                {selectedVisitor.role === 'owner' ? 'Vecino' : (selectedVisitor.category || 'Visita')} • {selectedVisitor.lote || selectedVisitor.invitations?.profiles?.lote || selectedVisitor.employer || 'Acceso Fijo'}
                             </p>
                         </div>
                         <div className="mr-2 p-3 bg-emerald-500/10 rounded-full text-emerald-500 shadow-inner">
@@ -1346,7 +1346,7 @@ export default function GuardiaPortal() {
                 </div>
             )}
 
-            {/* Feedback Visual de AutorizaciÃ³n */}
+            {/* Feedback Visual de Autorización */}
             {scanResult.match === true && !selectedVisitor && (
                 <div className="absolute inset-0 z-[60] flex items-center justify-center bg-emerald-500/20 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="p-8 bg-emerald-500 rounded-[3rem] shadow-[0_0_100px_rgba(16,185,129,0.4)] flex flex-col items-center gap-4 animate-bounce">
@@ -1356,7 +1356,7 @@ export default function GuardiaPortal() {
                 </div>
             )}
 
-            {/* Feedback de AnÃ¡lisis IA */}
+            {/* Feedback de Análisis IA */}
             {scanThinking && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-4 py-8 px-12 rounded-[3rem] bg-black/20 backdrop-blur-md border border-white/10">
                     <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
@@ -1368,7 +1368,7 @@ export default function GuardiaPortal() {
             <div className="absolute top-8 inset-x-8 z-50 flex items-center justify-between pointer-events-none">
                 <div className="bg-black/30 backdrop-blur-md px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Terminal v2.0 â€¢ BiometrÃ­a Activa</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Terminal v2.0 • Biometría Activa</span>
                 </div>
                 <button 
                   onClick={stopCamera}
@@ -1388,7 +1388,7 @@ export default function GuardiaPortal() {
             <Building2 className="w-10 h-10 text-emerald-400" />
             <div>
               <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">Barrio Seguro</h1>
-              <p className="text-emerald-400 font-black uppercase tracking-[0.3em] text-[10px]">Santa InÃ©s â€¢ Guardia</p>
+              <p className="text-emerald-400 font-black uppercase tracking-[0.3em] text-[10px]">Santa Inés • Guardia</p>
             </div>
           </div>
           <button onClick={() => { supabase.auth.signOut(); router.push("/"); }} className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl border border-red-500/20 text-[10px] font-black uppercase tracking-widest transition-all">Salir</button>
@@ -1420,8 +1420,8 @@ export default function GuardiaPortal() {
             <div className="space-y-12">
                 <div className="bg-emerald-600/10 border border-emerald-500/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6">
                     <div>
-                        <h3 className="text-xl font-black uppercase tracking-tighter mb-2">EscÃ¡ner IA Inteligente</h3>
-                        <p className="text-emerald-500 text-[10px] font-black uppercase tracking-wide">âœ… El visitante fue autorizado automÃ¡ticamente usando sus datos biomÃ©tricos previos.</p>
+                        <h3 className="text-xl font-black uppercase tracking-tighter mb-2">Escáner IA Inteligente</h3>
+                        <p className="text-emerald-500 text-[10px] font-black uppercase tracking-wide">✅ El visitante fue autorizado automáticamente usando sus datos biométricos previos.</p>
                     </div>
                     <button 
                         disabled={!isFaceApiLoaded}
@@ -1541,7 +1541,7 @@ export default function GuardiaPortal() {
             <div className="space-y-12">
                 <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6">
                     <div>
-                        <h3 className="text-xl font-black uppercase tracking-tighter mb-2">EscÃ¡ner IA de Salida</h3>
+                        <h3 className="text-xl font-black uppercase tracking-tighter mb-2">Escáner IA de Salida</h3>
                         <p className="text-red-500 text-[10px] font-black uppercase tracking-widest">Reconomiento facial para registrar egresos</p>
                     </div>
                     <button 
@@ -1570,7 +1570,7 @@ export default function GuardiaPortal() {
                       <div key={v.id} className="bg-slate-900 border border-white/5 p-6 rounded-3xl flex items-center justify-between group">
                           <div>
                               <h4 className="font-black uppercase text-white mb-1 group-hover:text-red-400 transition-colors">{v.full_name}</h4>
-                              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">INGRESÃ“ A LAS {new Date(v.entry_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">INGRESÓ A LAS {new Date(v.entry_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                           </div>
                           <div className="flex items-center gap-2">
                                      <button 
@@ -1597,7 +1597,7 @@ export default function GuardiaPortal() {
             <div className="space-y-4">
                 <div className="flex items-center gap-3 mb-6 ml-4">
                     <ShieldPlus className="w-5 h-5 text-amber-500" />
-                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">AuditorÃ­a de Identidad ({pendingVisitors.length + pendingOwners.length})</h3>
+                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Auditoría de Identidad ({pendingVisitors.length + pendingOwners.length})</h3>
                 </div>
                 
                 {(pendingVisitors.length + pendingOwners.length) > 0 ? (
@@ -1610,14 +1610,14 @@ export default function GuardiaPortal() {
                                 </div>
                                 <div>
                                     <h4 className="font-black uppercase text-white group-hover:text-emerald-400 transition-colors">{v.full_name}</h4>
-                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">NUEVO VECINO â€¢ LOTE {v.lote}</p>
+                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">NUEVO VECINO • LOTE {v.lote}</p>
                                 </div>
                             </div>
                             <button 
                               onClick={() => setViewingAuth({ 
                                 ...v, 
                                 isOwner: true,
-                                id: v.id // ID ExplÃ­cito
+                                id: v.id // ID Explícito
                               })}
                               className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95"
                             >
@@ -1634,14 +1634,14 @@ export default function GuardiaPortal() {
                                 </div>
                                 <div>
                                     <h4 className="font-black uppercase text-white group-hover:text-blue-400 transition-colors">{v.full_name}</h4>
-                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">VISITA â€¢ LOTE {v.invitations?.profiles?.lote}</p>
+                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">VISITA • LOTE {v.invitations?.profiles?.lote}</p>
                                 </div>
                             </div>
                             <button 
                               onClick={() => setViewingAuth({ 
                                 ...v, 
                                 isOwner: false,
-                                id: v.id // ID ExplÃ­cito
+                                id: v.id // ID Explícito
                               })}
                               className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95"
                             >
@@ -1653,7 +1653,7 @@ export default function GuardiaPortal() {
                 ) : (
                   <div className="py-20 bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
                       <ShieldCheck className="w-12 h-12 text-slate-800 mb-4" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay registros pendientes de revisiÃ³n</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay registros pendientes de revisión</p>
                   </div>
                 )}
             </div>
@@ -1667,14 +1667,14 @@ export default function GuardiaPortal() {
                     <div className="p-8 border-b border-white/5 flex items-center justify-between">
                         <div>
                             <h3 className="text-2xl font-black uppercase tracking-tighter text-white">{viewingAuth.full_name}</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">AuditorÃ­a de Identidad â€¢ DNI {viewingAuth.dni}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Auditoría de Identidad • DNI {viewingAuth.dni}</p>
                         </div>
                             <button onClick={() => { setViewingAuth(null); setVisitorHistory([]); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors"><X className="w-6 h-6" /></button>
                     </div>
                     
                     <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">DocumentaciÃ³n Capturada</p>
+                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Documentación Capturada</p>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-2">
                                     <p className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Selfie</p>
@@ -1721,14 +1721,14 @@ export default function GuardiaPortal() {
                             </div>
                         </div>
                         <div className="space-y-6">
-                             {/* Datos del VehÃ­culo */}
+                             {/* Datos del Vehículo */}
                              {viewingAuth.vehicle_patente && (
                                  <div className="bg-white/5 border border-white/5 p-6 rounded-[2rem] space-y-4">
                                      <div className="flex items-center gap-3">
                                          <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
                                              <Car className="w-5 h-5" />
                                          </div>
-                                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Datos del VehÃ­culo</p>
+                                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Datos del Vehículo</p>
                                      </div>
                                      <div className="grid grid-cols-2 gap-4">
                                          <div>
@@ -1736,7 +1736,7 @@ export default function GuardiaPortal() {
                                              <p className="text-xl font-black uppercase text-emerald-400">{viewingAuth.vehicle_patente}</p>
                                          </div>
                                          <div>
-                                             <p className="text-[8px] font-black uppercase text-slate-500 mb-1">AÃ±o</p>
+                                             <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Año</p>
                                              <p className="text-sm font-black uppercase text-white">{viewingAuth.vehicle_anio || 'N/A'}</p>
                                          </div>
                                      </div>
@@ -1757,7 +1757,7 @@ export default function GuardiaPortal() {
                                                <p className="text-[8px] font-black text-slate-500">{new Date(h.updated_at).toLocaleDateString('es-AR')}</p>
                                            </div>
                                            <p className="text-[9px] font-black uppercase text-emerald-500/70 tracking-widest">
-                                               {h.status === 'completed' ? 'Salida' : 'Ingreso'} â€¢ {new Date(h.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs
+                                               {h.status === 'completed' ? 'Salida' : 'Ingreso'} • {new Date(h.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs
                                            </p>
                                        </div>
                                    )) : (
@@ -1779,7 +1779,7 @@ export default function GuardiaPortal() {
                                     className="px-6 py-3 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white rounded-2xl border border-blue-500/20 font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2"
                                 >
                                     {isDetecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                                    Analizar BiometrÃ­a
+                                    Analizar Biometría
                                 </button>
                             )}
                             {viewingAuth.face_descriptor && (
@@ -1843,10 +1843,10 @@ export default function GuardiaPortal() {
 
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Nueva ContraseÃ±a</label>
+                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Nueva Contraseña</label>
                             <input 
                                 type="password" 
-                                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" 
+                                placeholder="••••••••" 
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 className="w-full bg-slate-950 border border-white/5 rounded-2xl p-5 text-sm font-black tracking-widest focus:border-emerald-500/50 focus:outline-none transition-all"
@@ -1854,10 +1854,10 @@ export default function GuardiaPortal() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Confirmar Nueva ContraseÃ±a</label>
+                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Confirmar Nueva Contraseña</label>
                             <input 
                                 type="password" 
-                                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" 
+                                placeholder="••••••••" 
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 className="w-full bg-slate-950 border border-white/5 rounded-2xl p-5 text-sm font-black tracking-widest focus:border-emerald-500/50 focus:outline-none transition-all"
@@ -2057,7 +2057,7 @@ export default function GuardiaPortal() {
                                             <div className="min-w-0">
                                                 <h4 className={`font-black uppercase text-xs tracking-tight transition-colors truncate ${v.status === 'blocked' ? 'text-red-400' : 'text-white group-hover:text-emerald-400'}`}>{v.full_name}</h4>
                                                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest leading-none mt-1">
-                                                    DNI {v.dni} â€¢ {v.category || 'SIN CATEGORÃA'} {v.employer ? `â€¢ AUTORIZADO POR: ${v.employer}` : ''}
+                                                    DNI {v.dni} • {v.category || 'SIN CATEGORÍA'} {v.employer ? `• AUTORIZADO POR: ${v.employer}` : ''}
                                                 </p>
                                                 {(v.start_date || v.end_date) && (
                                                   <p className="text-[8px] text-emerald-500/70 font-black uppercase tracking-widest mt-1">
@@ -2093,7 +2093,7 @@ export default function GuardiaPortal() {
                             ) : (
                                 <div className="py-20 bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
                                     <Briefcase className="w-12 h-12 text-slate-800 mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay trabajadores en esa bÃºsqueda</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay trabajadores en esa búsqueda</p>
                                 </div>
                             )}
                         </div>
@@ -2151,7 +2151,7 @@ export default function GuardiaPortal() {
                                             <div className="min-w-0">
                                                 <h4 className={`font-black uppercase text-xs tracking-tight transition-colors truncate ${v.status === 'blocked' ? 'text-red-400' : 'text-white group-hover:text-emerald-400'}`}>{v.full_name}</h4>
                                                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest leading-none mt-1">
-                                                    DNI {v.dni} â€¢ {v.category || 'SIN CATEGORÃA'} {v.employer ? `â€¢ AUTORIZADO POR: ${v.employer}` : ''}
+                                                    DNI {v.dni} • {v.category || 'SIN CATEGORÍA'} {v.employer ? `• AUTORIZADO POR: ${v.employer}` : ''}
                                                 </p>
                                                 {(v.start_date || v.end_date) && (
                                                   <p className="text-[8px] text-emerald-500/70 font-black uppercase tracking-widest mt-1">
@@ -2187,7 +2187,7 @@ export default function GuardiaPortal() {
                             ) : (
                                 <div className="py-20 bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
                                     <ShieldCheck className="w-12 h-12 text-slate-800 mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay permanentes en esa bÃºsqueda</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay permanentes en esa búsqueda</p>
                                 </div>
                             )}
                         </div>
@@ -2242,7 +2242,7 @@ export default function GuardiaPortal() {
                             ))
                         ) : (
                             <div className="p-20 text-center text-[10px] font-black uppercase text-slate-700 italic tracking-[0.3em]">
-                                No se encontraron vecinos con esa bÃºsqueda
+                                No se encontraron vecinos con esa búsqueda
                             </div>
                         )}
                     </div>
@@ -2256,7 +2256,7 @@ export default function GuardiaPortal() {
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-3">
                             <History className="w-5 h-5 text-emerald-500" />
-                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Historial de AuditorÃ­a (90 dÃ­as)</h3>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Historial de Auditoría (90 días)</h3>
                         </div>
                         <button 
                             onClick={handleClearHistory}
@@ -2328,7 +2328,7 @@ export default function GuardiaPortal() {
                                 )) : (
                                     <tr>
                                         <td colSpan={6} className="p-20 text-center text-[10px] font-black uppercase text-slate-700 italic tracking-[0.3em]">
-                                            No hay registros que coincidan con la bÃºsqueda
+                                            No hay registros que coincidan con la búsqueda
                                         </td>
                                     </tr>
                                 )}
@@ -2345,7 +2345,7 @@ export default function GuardiaPortal() {
                     <div className="p-8 border-b border-white/5 flex items-center justify-between">
                         <div>
                             <h3 className="text-2xl font-black uppercase tracking-tighter text-white">{viewingAuth.full_name}</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">AuditorÃ­a de Identidad â€¢ DNI {viewingAuth.dni}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Auditoría de Identidad • DNI {viewingAuth.dni}</p>
                         </div>
                         <button onClick={() => { setViewingAuth(null); setVisitorHistory([]); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors"><X className="w-6 h-6" /></button>
                     </div>
@@ -2462,14 +2462,14 @@ export default function GuardiaPortal() {
                                         <Car className="w-10 h-10" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">InformaciÃ³n del VehÃ­culo</p>
+                                        <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">Información del Vehículo</p>
                                         <h4 className="text-2xl font-black uppercase text-white tracking-tighter leading-none">{viewingAuth.vehicle_modelo || '---'}</h4>
-                                        <p className="text-sm font-black text-emerald-500 tracking-[0.2em] mt-2">{viewingAuth.vehicle_patente} â€¢ AÃ±o {viewingAuth.vehicle_anio || '--'}</p>
+                                        <p className="text-sm font-black text-emerald-500 tracking-[0.2em] mt-2">{viewingAuth.vehicle_patente} • Año {viewingAuth.vehicle_anio || '--'}</p>
                                     </div>
                                 </div>
                                 
                                 <div className="flex flex-col items-center gap-3">
-                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">ValidaciÃ³n de Seguro (Guardia)</p>
+                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Validación de Seguro (Guardia)</p>
                                     <div className="flex p-1.5 bg-black/40 rounded-2xl border border-white/5 gap-2">
                                         {[
                                             {id: 'VIGENTE', color: 'bg-emerald-500', label: 'PAGO / VIGENTE'},
@@ -2504,7 +2504,7 @@ export default function GuardiaPortal() {
                                             </div>
                                         </div>
                                         <p className="text-[9px] font-black uppercase text-emerald-500/70 tracking-widest bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10">
-                                            {h.status === 'completed' ? 'Salida' : 'Ingreso'} â€¢ {new Date(h.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs
+                                            {h.status === 'completed' ? 'Salida' : 'Ingreso'} • {new Date(h.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs
                                         </p>
                                     </div>
                                 )) : (
@@ -2525,7 +2525,7 @@ export default function GuardiaPortal() {
                                     className="px-6 py-3 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white rounded-2xl border border-blue-500/20 font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2"
                                 >
                                     {isDetecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                                    Analizar BiometrÃ­a
+                                    Analizar Biometría
                                 </button>
                             )}
                             {viewingAuth.face_descriptor && (
@@ -2684,7 +2684,7 @@ export default function GuardiaPortal() {
                                 <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">DNI</label>
                                 <input 
                                     type="text" 
-                                    placeholder="SÃ“LO NÃšMEROS"
+                                    placeholder="SÓLO NÚMEROS"
                                     value={newTrabajador.dni}
                                     onChange={(e) => setNewTrabajador({...newTrabajador, dni: e.target.value})}
                                     className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
@@ -2694,7 +2694,7 @@ export default function GuardiaPortal() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">CategorÃ­a</label>
+                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Categoría</label>
                                 <input 
                                     type="text" 
                                     placeholder="EJ: JARDINERO"
@@ -2715,9 +2715,9 @@ export default function GuardiaPortal() {
                             </div>
                         </div>
 
-                        {/* DOCUMENTACIÃ“N TRABAJADOR */}
+                        {/* DOCUMENTACIÓN TRABAJADOR */}
                         <div className="space-y-4 pt-4 border-t border-white/5">
-                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2">DocumentaciÃ³n Obligatoria</p>
+                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2">Documentación Obligatoria</p>
                             <div className="grid grid-cols-3 gap-3">
                                 {[
                                     {id: 'selfie', label: 'Selfie', icon: Users},
@@ -2785,7 +2785,7 @@ export default function GuardiaPortal() {
                                 <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Nombre Completo</label>
                                 <input 
                                     type="text" 
-                                    placeholder="EJ: ANA MARÃA"
+                                    placeholder="EJ: ANA MARÍA"
                                     value={newPermanente.full_name}
                                     onChange={(e) => setNewPermanente({...newPermanente, full_name: e.target.value.toUpperCase()})}
                                     className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
@@ -2795,7 +2795,7 @@ export default function GuardiaPortal() {
                                 <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">DNI</label>
                                 <input 
                                     type="text" 
-                                    placeholder="SÃ“LO NÃšMEROS"
+                                    placeholder="SÓLO NÚMEROS"
                                     value={newPermanente.dni}
                                     onChange={(e) => setNewPermanente({...newPermanente, dni: e.target.value})}
                                     className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
@@ -2805,7 +2805,7 @@ export default function GuardiaPortal() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">CategorÃ­a</label>
+                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Categoría</label>
                                 <input 
                                     type="text" 
                                     placeholder="EJ: FAMILIAR"
@@ -2815,7 +2815,7 @@ export default function GuardiaPortal() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">VinculaciÃ³n / Lote</label>
+                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Vinculación / Lote</label>
                                 <input 
                                     type="text" 
                                     placeholder="EJ: LOTE 210"
@@ -2826,7 +2826,7 @@ export default function GuardiaPortal() {
                             </div>
                         </div>
 
-                        {/* DOCUMENTACIÃ“N PERMANENTE */}
+                        {/* DOCUMENTACIÓN PERMANENTE */}
                         <div className="space-y-4 pt-4 border-t border-white/5">
                             <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2">Fotos de Identidad</p>
                             <div className="grid grid-cols-3 gap-3">
@@ -2874,7 +2874,7 @@ export default function GuardiaPortal() {
             </div>
         )}
         
-        {/* MODAL DE ZOOM PARA DOCUMENTACIÃ“N */}
+        {/* MODAL DE ZOOM PARA DOCUMENTACIÓN */}
         <AnimatePresence>
             {zoomedImg && (
                 <div 

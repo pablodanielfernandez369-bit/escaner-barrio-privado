@@ -71,7 +71,7 @@ export default function OwnerDashboard() {
   useEffect(() => {
     verificarAcceso();
     
-    // CANAL ÃšNICO (10s): Solo invitaciones del dÃ­a (Alta velocidad)
+    // CANAL ÚNICO (10s): Solo invitaciones del día (Alta velocidad)
     const criticalInterval = setInterval(() => {
       if (userProfile?.id) {
         fetchActiveInvitations(userProfile.id);
@@ -136,8 +136,8 @@ export default function OwnerDashboard() {
       .limit(50);
     
     if (data) {
-      // Ordenamiento de registros internos: Cada invitaciÃ³n tiene un array de registros,
-      // nos interesa el mÃ¡s reciente para determinar el estado actual.
+      // Ordenamiento de registros internos: Cada invitación tiene un array de registros,
+      // nos interesa el más reciente para determinar el estado actual.
       const sortedData = data.map(inv => ({
         ...inv,
         visitor_records: inv.visitor_records?.sort((a: any, b: any) => 
@@ -145,13 +145,13 @@ export default function OwnerDashboard() {
         )
       }));
 
-      // FILTRO ROBUSTO: Solo mostrar si tiene registros biomÃ©tricos O si el nombre NO es el placeholder
+      // FILTRO ROBUSTO: Solo mostrar si tiene registros biométricos O si el nombre NO es el placeholder
       const filteredData = sortedData.filter(inv => {
         const hasRecords = inv.visitor_records && inv.visitor_records.length > 0;
         const currentName = (inv.visitor_name || "").trim().toLowerCase();
         const pkgName = "invitado a identificar";
         
-        // Es placeholder si estÃ¡ vacÃ­o o si coincide con el texto genÃ©rico
+        // Es placeholder si está vacío o si coincide con el texto genérico
         const isPlaceholder = currentName === "" || currentName === pkgName;
         
         return hasRecords || !isPlaceholder;
@@ -176,7 +176,7 @@ export default function OwnerDashboard() {
       .select().single();
 
     if (invErr) {
-        setErrorDetails("No se pudo crear la invitaciÃ³n automÃ¡tica.");
+        setErrorDetails("No se pudo crear la invitación automática.");
         setSubmitting(false);
         return;
     }
@@ -194,12 +194,12 @@ export default function OwnerDashboard() {
         }]);
 
     if (recErr) {
-        console.error("Error al crear registro automÃ¡tico:", recErr);
+        console.error("Error al crear registro automático:", recErr);
     }
 
     await fetchActiveInvitations(userProfile.id);
     setSubmitting(false);
-    alert(`InvitaciÃ³n automÃ¡tica generada para ${visitor.full_name}. El guardia ya puede verlo en el sistema.`);
+    alert(`Invitación automática generada para ${visitor.full_name}. El guardia ya puede verlo en el sistema.`);
   };
 
   const handleReAuthorize = async (inv: any) => {
@@ -216,13 +216,13 @@ export default function OwnerDashboard() {
           .limit(1);
 
         if (fetchErr || !records || records.length === 0) {
-          alert("No se encontraron registros biomÃ©tricos previos para este invitado.");
+          alert("No se encontraron registros biométricos previos para este invitado.");
           return;
         }
 
         const pastRecord = records[0];
 
-        // 2. Crear registro APROBADO instantÃ¡neamente en ACCESOS
+        // 2. Crear registro APROBADO instantáneamente en ACCESOS
         const { error: recErr } = await supabase
             .from('visitor_records')
             .insert([{
@@ -242,9 +242,9 @@ export default function OwnerDashboard() {
         }).eq('id', inv.id);
 
         await fetchActiveInvitations(userProfile.id);
-        alert(`âš  Acceso Express RE-ACTIVADO para ${pastRecord.full_name}.`);
+        alert(`⚠ Acceso Express RE-ACTIVADO para ${pastRecord.full_name}.`);
     } catch (err: any) {
-        console.error("Error en re-autorizaciÃ³n:", err);
+        console.error("Error en re-autorización:", err);
         alert("Hubo un problema al re-autorizar el acceso: " + err.message);
     } finally {
         setSubmitting(false);
@@ -265,7 +265,7 @@ export default function OwnerDashboard() {
       .select().single();
 
     if (error) {
-       setErrorDetails("No se pudo repetir la invitaciÃ³n.");
+       setErrorDetails("No se pudo repetir la invitación.");
     } else {
        setInvitationLink(`${window.location.origin}/visitante/${data.id}`);
     }
@@ -304,15 +304,15 @@ export default function OwnerDashboard() {
       }
 
       if (newPassword) {
-        if (newPassword.length < 6) throw new Error("La contraseÃ±a debe tener al menos 6 caracteres.");
+        if (newPassword.length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres.");
         const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
         if (authError) throw authError;
       }
 
-      setSettingsSuccess("ConfiguraciÃ³n actualizada correctamente.");
+      setSettingsSuccess("Configuración actualizada correctamente.");
       setTimeout(() => setShowSettings(false), 2000);
     } catch (err: any) {
-      setSettingsError(err.message || "Error al actualizar la configuraciÃ³n.");
+      setSettingsError(err.message || "Error al actualizar la configuración.");
     } finally {
       setIsUpdating(false);
     }
@@ -332,7 +332,7 @@ export default function OwnerDashboard() {
 
       if (error) {
         console.error("Error completo Supabase:", error);
-        alert(`ERROR TÃ‰CNICO:\nMensaje: ${error.message}\nDetalle: ${error.details}\nSugerencia: ${error.hint}\nCÃ³digo: ${error.code}`);
+        alert(`ERROR TÉCNICO:\nMensaje: ${error.message}\nDetalle: ${error.details}\nSugerencia: ${error.hint}\nCódigo: ${error.code}`);
         throw error;
       }
 
@@ -346,7 +346,7 @@ export default function OwnerDashboard() {
   const handleExpressAuthorization = async (inv: any) => {
     setSubmitting(true);
     
-    // 1. Buscar en registros anteriores del MISMO PROPIETARIO (permite bÃºsqueda parcial)
+    // 1. Buscar en registros anteriores del MISMO PROPIETARIO (permite búsqueda parcial)
     let matchedDni = null;
     const { data: pastInvites } = await supabase
       .from('invitations')
@@ -360,7 +360,7 @@ export default function OwnerDashboard() {
     if (pastInvites && pastInvites.length > 0) {
       matchedDni = pastInvites[0].visitor_dni;
     } else {
-      // 2. BÃºsqueda exacta global
+      // 2. Búsqueda exacta global
       const { data: exactMatch } = await supabase
         .from('visitors')
         .select('dni')
@@ -388,7 +388,7 @@ export default function OwnerDashboard() {
         
         if (!error) {
           await supabase.from('invitations').update({ visitor_dni: visitorData.dni }).eq('id', inv.id);
-          alert(`âœ… ${visitorData.full_name} fue autorizado automÃ¡ticamente usando sus datos biomÃ©tricos previos.`);
+          alert(`✅ ${visitorData.full_name} fue autorizado automáticamente usando sus datos biométricos previos.`);
           await fetchActiveInvitations(userProfile.id);
           setSubmitting(false);
           return;
@@ -397,7 +397,7 @@ export default function OwnerDashboard() {
     }
 
     // SI FALLA o NO EXISTE, abrimos la pantalla para compartir
-    alert(`âš ï¸ No se encontraron registros de ${inv.visitor_name}. Compartile el enlace para su registro biomÃ©trico inicial.`);
+    alert(`⚠️ No se encontraron registros de ${inv.visitor_name}. Compartile el enlace para su registro biométrico inicial.`);
     const link = `${window.location.origin}/visitante/${inv.id}`;
     setInvitationLink(link);
     setSubmitting(false);
@@ -433,8 +433,8 @@ export default function OwnerDashboard() {
       .single();
 
     if (error) {
-      console.error("Error al crear invitaciÃ³n:", error.message);
-      setErrorDetails(`No se pudo crear la invitaciÃ³n: ${error.message}`);
+      console.error("Error al crear invitación:", error.message);
+      setErrorDetails(`No se pudo crear la invitación: ${error.message}`);
     } else if (data) {
       const link = `${window.location.origin}/visitante/${data.id}`;
       setInvitationLink(link);
@@ -446,7 +446,7 @@ export default function OwnerDashboard() {
   const [copied, setCopied] = useState(false);
   const shareByWhatsApp = () => {
     if (!invitationLink) return;
-    const message = `Â¡Hola! AquÃ­ tienes tu pase para ingresar al Barrio Seguro. Por favor, completÃ¡ el registro antes de llegar a la guardia: ${invitationLink}`;
+    const message = `¡Hola! Aquí tienes tu pase para ingresar al Barrio Seguro. Por favor, completá el registro antes de llegar a la guardia: ${invitationLink}`;
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -537,7 +537,7 @@ export default function OwnerDashboard() {
              <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-400">
                Panel de Propietario
              </h2>
-             <p className="text-slate-500 text-sm mt-1">Genera una nueva invitaciÃ³n para acceder al barrio.</p>
+             <p className="text-slate-500 text-sm mt-1">Genera una nueva invitación para acceder al barrio.</p>
            </div>
            <span className="text-[9px] font-black uppercase text-slate-800 bg-emerald-500/5 px-3 py-1 rounded-full border border-white/5">Build v6.5</span>
          </div>
@@ -548,7 +548,7 @@ export default function OwnerDashboard() {
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-black uppercase text-white tracking-widest">Crear Nuevo Pase</h3>
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-widest leading-relaxed">
-                  SeleccionÃ¡ el tipo de acceso para continuar
+                  Seleccioná el tipo de acceso para continuar
                 </p>
               </div>
 
@@ -603,7 +603,7 @@ export default function OwnerDashboard() {
                           onChange={(e) => setWorkerCategory(e.target.value)}
                           className="w-full bg-black/20 border border-white/5 rounded-2xl p-5 pl-14 text-sm font-black text-white appearance-none focus:border-emerald-500/50 outline-none transition-all"
                         >
-                          {['Jardinero', 'Plomero', 'Electricista', 'Gasista', 'Piletero', 'Personal DomÃ©stico', 'Otros'].map(cat => (
+                          {['Jardinero', 'Plomero', 'Electricista', 'Gasista', 'Piletero', 'Personal Doméstico', 'Otros'].map(cat => (
                             <option key={cat} value={cat} className="bg-slate-900">{cat}</option>
                           ))}
                         </select>
@@ -673,7 +673,7 @@ export default function OwnerDashboard() {
                        ))}
                     </div>
                     <p className="text-[9px] font-black uppercase text-emerald-500/70 text-center tracking-widest mt-2 animate-pulse">
-                      VÃLIDO ÃšNICAMENTE PARA EL DÃA DE HOY
+                      VÁLIDO ÚNICAMENTE PARA EL DÍA DE HOY
                     </p>
                   </div>
                 )}
@@ -701,7 +701,7 @@ export default function OwnerDashboard() {
                     <CheckCircle2 className="w-12 h-12" />
                   </div>
                 </div>
-                <h2 className="text-2xl font-bold text-white">Â¡Pase Generado Exitosamente!</h2>
+                <h2 className="text-2xl font-bold text-white">¡Pase Generado Exitosamente!</h2>
                 
                 <div className="flex justify-center mt-6 mb-4">
                   <div className="p-4 bg-white rounded-3xl shadow-xl shadow-emerald-500/10 border-4 border-emerald-500/20">
@@ -727,7 +727,7 @@ export default function OwnerDashboard() {
                       className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-medium ${copied ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-800 hover:bg-slate-700'}`}
                     >
                       {copied ? <CheckCircle2 className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                      {copied ? "Â¡Copiado!" : "Copiar Enlace"}
+                      {copied ? "¡Copiado!" : "Copiar Enlace"}
                     </button>
                     <button 
                       onClick={() => { setInvitationLink(null); }}
@@ -767,18 +767,18 @@ export default function OwnerDashboard() {
                     visibleInvitations.map((inv) => {
                         const rec = inv.visitor_records?.[0];
                             
-                            // DetecciÃ³n de estado por marcador redundante (Fix SincronizaciÃ³n)
+                            // Detección de estado por marcador redundante (Fix Sincronización)
                             let status = rec?.status || 'no_registered';
                             const invName = rec?.full_name || inv.visitor_name || "Invitado a Identificar";
                             
-                            // LÃ³gica de Re-ingreso para Personas con Permanencia (Worker/Permanent)
-                            // Si alguien saliÃ³ pero su pase sigue vigente, lo mostramos como "Por ingresar"
+                            // Lógica de Re-ingreso para Personas con Permanencia (Worker/Permanent)
+                            // Si alguien salió pero su pase sigue vigente, lo mostramos como "Por ingresar"
                             const isTenure = inv.type === 'worker' || inv.type === 'permanent';
                             const hasValidDates = !inv.end_date || new Date(inv.end_date) >= new Date(new Date().setHours(0,0,0,0));
                             
                             if (status === 'no_registered') {
-                                if (invName.includes("[INGRESÃ“]")) status = 'inside';
-                                else if (invName.includes("[SALIÃ“]")) {
+                                if (invName.includes("[INGRESÓ]")) status = 'inside';
+                                else if (invName.includes("[SALIÓ]")) {
                                     status = (isTenure && hasValidDates) ? 'approved' : 'completed';
                                 }
                                 else if (invName.includes("[APROBADO]")) status = 'approved';
@@ -814,15 +814,15 @@ export default function OwnerDashboard() {
                                             {status === 'no_registered' && <span className="text-[8px] font-black uppercase text-slate-400 bg-slate-800/50 px-2 py-0.5 rounded border border-white/5">Esperando Registro</span>}
                                             {status === 'pending' && <span className="text-[8px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded animate-pulse">Registro Pendiente</span>}
                                             {status === 'approved' && <span className="text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Por ingresar al barrio</span>}
-                                            {status === 'inside' && <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">IngresÃ³ al barrio</span>}
-                                            {status === 'completed' && <span className="text-[8px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded">SaliÃ³ del barrio</span>}
+                                            {status === 'inside' && <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">Ingresó al barrio</span>}
+                                            {status === 'completed' && <span className="text-[8px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded">Salió del barrio</span>}
                                             {status === 'rejected' && <span className="text-[8px] font-black uppercase text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">Registro Rechazado</span>}
 
                                             {isTenure && hasValidDates && (
-                                              <span className="text-[8px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">AutorizaciÃ³n Activa</span>
+                                              <span className="text-[8px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Autorización Activa</span>
                                             )}
                                             {inv.end_date && new Date(inv.end_date) < new Date(new Date().setHours(0,0,0,0)) && (
-                                                <span className="text-[8px] font-black uppercase text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">AutorizaciÃ³n Vencida</span>
+                                                <span className="text-[8px] font-black uppercase text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">Autorización Vencida</span>
                                             )}
                                         </div>
                                     </div>
@@ -833,7 +833,7 @@ export default function OwnerDashboard() {
                                           onClick={() => handleExpressAuthorization(inv)}
                                           disabled={submitting}
                                           className="p-3 bg-white/5 hover:bg-emerald-500 hover:text-white rounded-xl transition-all disabled:opacity-50"
-                                          title="AutorizaciÃƒÂ³n ExprÃƒÂ©s / Compartir"
+                                          title="AutorizaciÃ³n ExprÃ©s / Compartir"
                                         >
                                             <Share2 className="w-4 h-4" />
                                         </button>
@@ -879,7 +879,7 @@ export default function OwnerDashboard() {
                                         <button 
                                             onClick={() => setConfirmDeleteId(inv.id)}
                                             className="p-3 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all"
-                                            title="Eliminar InvitaciÃ³n"
+                                            title="Eliminar Invitación"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
@@ -895,7 +895,7 @@ export default function OwnerDashboard() {
                 )}
             </div>
         </div>
-        {/* ConfiguraciÃ³n Modal */}
+        {/* Configuración Modal */}
         <AnimatePresence>
           {showSettings && (
             <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6">
@@ -938,14 +938,14 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Cambiar ContraseÃƒÂ±a</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Cambiar ContraseÃ±a</label>
                     <div className="relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
                       <input 
                         type="password" 
                         value={newPassword} 
                         onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Nueva contraseÃ±a"
+                        placeholder="Nueva contraseña"
                         className="w-full bg-slate-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-white focus:border-emerald-500/50 outline-none transition-all"
                       />
                     </div>
