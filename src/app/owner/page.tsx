@@ -26,6 +26,7 @@ import {
   Briefcase,
   Clock,
   User,
+  Search,
   ChevronDown
 } from "lucide-react";
 import Link from "next/link";
@@ -94,7 +95,7 @@ export default function OwnerDashboard() {
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
-      .single();
+      .maybeSingle();
 
     if (!profile || profile.role !== 'owner' || profile.status !== 'active') {
       router.push("/login");
@@ -178,7 +179,7 @@ export default function OwnerDashboard() {
           owner_id: userProfile.id,
           visitor_dni: visitor.dni
       }])
-      .select().single();
+      .select().maybeSingle();
 
     if (invErr) {
         setErrorDetails("No se pudo crear la invitación automática.");
@@ -267,7 +268,7 @@ export default function OwnerDashboard() {
           owner_id: userProfile.id,
           visitor_dni: visitor.dni
       }])
-      .select().single();
+      .select().maybeSingle();
 
     if (error) {
        setErrorDetails("No se pudo repetir la invitación.");
@@ -298,7 +299,7 @@ export default function OwnerDashboard() {
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
         
         if (profileData) {
           setUserProfile(profileData);
@@ -376,7 +377,7 @@ export default function OwnerDashboard() {
     }
 
     if (matchedDni) {
-      const { data: visitorData } = await supabase.from('visitors').select('*').eq('dni', matchedDni).single();
+      const { data: visitorData } = await supabase.from('visitors').select('*').eq('dni', matchedDni).maybeSingle();
       
       if (visitorData) {
         const { error } = await supabase
@@ -436,7 +437,7 @@ export default function OwnerDashboard() {
           }
       ])
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Error al crear invitación:", error.message);
@@ -495,13 +496,13 @@ export default function OwnerDashboard() {
   });
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <Loader2 className="w-12 h-12 text-emerald-600 animate-spin" />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans p-6 md:p-12 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-6 md:p-12 relative overflow-hidden transition-colors duration-500">
       <div className="absolute top-0 right-[-10%] w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
       <div className="max-w-2xl mx-auto relative z-10">
@@ -512,26 +513,26 @@ export default function OwnerDashboard() {
         
         <header className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 shadow-lg">
-              <Building2 className="w-8 h-8 text-emerald-400" />
+            <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <Building2 className="w-8 h-8 text-emerald-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+              <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none">
                 {CONFIG.brandName}
               </h1>
-              <p className="text-emerald-400 text-xs font-black uppercase tracking-[0.3em]">{CONFIG.neighborhoodName}</p>
+              <p className="text-emerald-600 text-xs font-black uppercase tracking-[0.3em]">{CONFIG.neighborhoodName}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setShowSettings(true)}
-              className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5 group"
+              className="p-3 bg-white hover:bg-slate-50 rounded-2xl transition-all border border-slate-200 shadow-sm group"
             >
-              <Settings className="w-5 h-5 text-slate-500 group-hover:text-emerald-500 transition-colors" />
+              <Settings className="w-5 h-5 text-slate-400 group-hover:text-emerald-600 transition-colors" />
             </button>
             <button 
               onClick={handleLogout}
-              className="p-3 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all border border-red-500/20"
+              className="p-3 bg-red-500/5 hover:bg-red-500/10 text-red-600 rounded-2xl transition-all border border-red-500/10"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -540,26 +541,26 @@ export default function OwnerDashboard() {
 
          <div className="mb-8 flex items-center justify-between">
            <div>
-             <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-400">
+             <h2 className="text-xl font-bold text-slate-800">
                Panel de Propietario
              </h2>
              <p className="text-slate-500 text-sm mt-1">Genera una nueva invitación para acceder al barrio.</p>
            </div>
-           <span className="text-[9px] font-black uppercase text-slate-800 bg-emerald-500/5 px-3 py-1 rounded-full border border-white/5">Build v6.5</span>
+           <span className="text-[9px] font-black uppercase text-slate-600 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">Build v6.5</span>
          </div>
 
-        <div className="bg-slate-900/50 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-2xl overflow-hidden">
+        <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-xl overflow-hidden">
           {!invitationLink ? (
             <div className="flex flex-col w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center space-y-2">
-                <h3 className="text-xl font-black uppercase text-white tracking-widest">Crear Nuevo Pase</h3>
-                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest leading-relaxed">
+                <h3 className="text-xl font-black uppercase text-slate-800 tracking-widest">Crear Nuevo Pase</h3>
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest leading-relaxed">
                   Seleccioná el tipo de acceso para continuar
                 </p>
               </div>
 
               {/* Selector de Tipo */}
-              <div className="grid grid-cols-3 gap-2 p-1 bg-black/40 rounded-2xl border border-white/5">
+              <div className="grid grid-cols-3 gap-2 p-1 bg-slate-50 rounded-2xl border border-slate-100">
                 {[
                   { id: 'visit', label: 'Visita', icon: User },
                   { id: 'worker', label: 'Trabajador', icon: Briefcase },
@@ -592,7 +593,7 @@ export default function OwnerDashboard() {
                         type="date" 
                         value={expectedDate}
                         onChange={(e) => setExpectedDate(e.target.value)}
-                        className="w-full bg-black/20 border border-white/5 rounded-2xl p-5 pl-14 text-sm font-black text-white focus:border-emerald-500/50 outline-none transition-all"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 pl-14 text-sm font-black text-slate-900 focus:border-emerald-500/50 outline-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -601,39 +602,39 @@ export default function OwnerDashboard() {
                 {invitationType === 'worker' && (
                   <>
                     <div className="space-y-2 animate-in fade-in zoom-in-95 duration-300">
-                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] ml-4">Rubro del Trabajador</label>
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4">Rubro del Trabajador</label>
                       <div className="relative">
-                        <Briefcase className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500 pointer-events-none" />
+                        <Briefcase className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-600 pointer-events-none" />
                         <select 
                           value={workerCategory}
                           onChange={(e) => setWorkerCategory(e.target.value)}
-                          className="w-full bg-black/20 border border-white/5 rounded-2xl p-5 pl-14 text-sm font-black text-white appearance-none focus:border-emerald-500/50 outline-none transition-all"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 pl-14 text-sm font-black text-slate-900 appearance-none focus:border-emerald-500/50 outline-none transition-all shadow-inner"
                         >
                           {['Jardinero', 'Plomero', 'Electricista', 'Gasista', 'Piletero', 'Personal Doméstico', 'Otros'].map(cat => (
-                            <option key={cat} value={cat} className="bg-slate-900">{cat}</option>
+                            <option key={cat} value={cat} className="bg-white">{cat}</option>
                           ))}
                         </select>
-                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 pointer-events-none" />
+                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 animate-in fade-in zoom-in-95 duration-300">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Desde</label>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Desde</label>
                         <input 
                           type="date" 
                           value={startDate}
                           onChange={(e) => setStartDate(e.target.value)}
-                          className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-xs font-black text-white focus:border-emerald-500/50 outline-none"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-900 focus:border-emerald-500/50 outline-none shadow-inner"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Hasta</label>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Hasta</label>
                         <input 
                           type="date" 
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
-                          className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-xs font-black text-white focus:border-emerald-500/50 outline-none"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-900 focus:border-emerald-500/50 outline-none shadow-inner"
                         />
                       </div>
                     </div>
@@ -643,21 +644,21 @@ export default function OwnerDashboard() {
                 {invitationType === 'permanent' && (
                   <div className="grid grid-cols-2 gap-4 animate-in fade-in zoom-in-95 duration-300">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Desde</label>
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Desde</label>
                       <input 
                         type="date" 
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-xs font-black text-white focus:border-emerald-500/50 outline-none"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-900 focus:border-emerald-500/50 outline-none shadow-inner"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Hasta</label>
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Hasta</label>
                       <input 
                         type="date" 
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full bg-black/20 border border-white/5 rounded-2xl p-4 text-xs font-black text-white focus:border-emerald-500/50 outline-none"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-900 focus:border-emerald-500/50 outline-none shadow-inner"
                       />
                     </div>
                   </div>
@@ -665,20 +666,20 @@ export default function OwnerDashboard() {
 
                 {invitationType === 'delivery' && (
                   <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] ml-4">Cantidad de Entregas Autorizadas (Hoy)</label>
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4">Cantidad de Entregas Autorizadas (Hoy)</label>
                     <div className="grid grid-cols-5 gap-2">
                        {[1, 2, 3, 4, 5].map(q => (
                          <button 
                            key={q}
                            type="button"
                            onClick={() => setDeliveryQuantity(q)}
-                           className={`py-4 rounded-2xl font-black text-xs transition-all border ${deliveryQuantity === q ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg' : 'bg-black/20 border-white/5 text-slate-500 hover:text-white hover:border-white/20'}`}
+                           className={`py-4 rounded-2xl font-black text-xs transition-all border ${deliveryQuantity === q ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg' : 'bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300'}`}
                          >
                            {q}
                          </button>
                        ))}
                     </div>
-                    <p className="text-[9px] font-black uppercase text-emerald-500/70 text-center tracking-widest mt-2 animate-pulse">
+                    <p className="text-[9px] font-black uppercase text-emerald-600/70 text-center tracking-widest mt-2 animate-pulse">
                       VÁLIDO ÚNICAMENTE PARA EL DÍA DE HOY
                     </p>
                   </div>
@@ -688,7 +689,7 @@ export default function OwnerDashboard() {
               <button 
                 onClick={handleCreateInvitation}
                 disabled={submitting || (invitationType === 'permanent' && !endDate)}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white py-6 rounded-3xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-30 text-white py-6 rounded-3xl shadow-xl shadow-emerald-500/10 transition-all active:scale-95 flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs"
               >
                 {submitting ? (
                   <Loader2 className="w-6 h-6 animate-spin" />
@@ -706,50 +707,51 @@ export default function OwnerDashboard() {
               </button>
             </div>
           ) : (
-             <div className="text-center py-8 space-y-6 animate-in fade-in zoom-in duration-500">
-                <div className="flex justify-center mb-4">
-                  <div className="p-4 bg-emerald-500/20 rounded-full text-emerald-400">
-                    <CheckCircle2 className="w-12 h-12" />
-                  </div>
+            <div className="text-center py-8 space-y-6 animate-in fade-in zoom-in duration-500">
+              <div className="flex justify-center mb-4">
+                <div className="p-4 bg-emerald-50 rounded-full text-emerald-600 border border-emerald-100 shadow-sm">
+                  <CheckCircle2 className="w-12 h-12" />
                 </div>
-                <h2 className="text-2xl font-bold text-white">¡Pase Generado Exitosamente!</h2>
-                
-                <div className="flex justify-center mt-6 mb-4">
-                  <div className="p-4 bg-white rounded-3xl shadow-xl shadow-emerald-500/10 border-4 border-emerald-500/20">
-                     <QRCodeSVG value={invitationLink} size={220} level={"H"} className="text-slate-900" includeMargin={true} />
-                  </div>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-800">¡Pase Generado Exitosamente!</h2>
+              
+              <div className="flex justify-center mt-6 mb-4">
+                <div className="p-4 bg-white rounded-3xl shadow-xl shadow-emerald-500/5 border-4 border-emerald-500/10">
+                   <QRCodeSVG value={invitationLink} size={220} level={"H"} className="text-slate-900" includeMargin={true} />
                 </div>
+              </div>
 
-                <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl break-all">
-                  <p className="text-emerald-400 text-sm font-mono">{invitationLink}</p>
-                </div>
-                <div className="flex flex-col gap-3">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl break-all shadow-inner">
+                <p className="text-emerald-700 text-sm font-mono font-bold leading-relaxed">{invitationLink}</p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={shareByWhatsApp}
+                  className="w-full flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#128C7E] text-white py-4 rounded-xl transition-all font-black shadow-lg shadow-green-900/10 active:scale-95"
+                >
+                  <MessageCircle className="w-6 h-6 fill-current" />
+                  Enviar por WhatsApp
+                </button>
+
+                <div className="flex gap-4">
                   <button 
-                    onClick={shareByWhatsApp}
-                    className="w-full flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#128C7E] text-white py-4 rounded-xl transition-all font-black shadow-lg shadow-green-900/20 active:scale-95"
+                    onClick={copyToClipboard}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest ${copied ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-600 shadow-sm hover:bg-slate-50'}`}
                   >
-                    <MessageCircle className="w-6 h-6 fill-current" />
-                    Enviar por WhatsApp
+                    {copied ? <CheckCircle2 className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                    {copied ? "¡Copiado!" : "Copiar Enlace"}
                   </button>
-
-                  <div className="flex gap-4">
-                    <button 
-                      onClick={copyToClipboard}
-                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-medium ${copied ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-800 hover:bg-slate-700'}`}
-                    >
-                      {copied ? <CheckCircle2 className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                      {copied ? "¡Copiado!" : "Copiar Enlace"}
-                    </button>
-                    <button 
-                      onClick={() => { setInvitationLink(null); }}
-                      className="flex-1 flex items-center justify-center gap-2 border border-slate-700 hover:bg-slate-800 py-3 rounded-xl transition-colors font-medium"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Crear Otra
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => { setInvitationLink(null); }}
+                    className="flex-1 flex items-center justify-center gap-2 border border-slate-200 bg-white text-slate-600 py-3 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest shadow-sm hover:bg-slate-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Crear Otra
+                  </button>
                 </div>
-             </div>
+              </div>
+            </div>
           )}
         </div>
 
@@ -757,19 +759,19 @@ export default function OwnerDashboard() {
             <div className="flex items-center justify-between px-4">
                 <div className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-white">Invitados</h3>
+                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-900">Invitados</h3>
                 </div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{visibleInvitations.length} TOTAL</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{visibleInvitations.length} TOTAL</p>
             </div>
 
             <div className="relative">
-                <Plus className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 rotate-45" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input 
                     type="text" 
                     value={activeSearchTerm}
                     onChange={(e) => setActiveSearchTerm(e.target.value)}
                     placeholder="BUSCAR EN LOS ACCESOS..." 
-                    className="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:border-emerald-500/30 outline-none transition-all shadow-lg"
+                    className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/30 outline-none transition-all shadow-sm"
                 />
             </div>
 
@@ -806,40 +808,40 @@ export default function OwnerDashboard() {
                             
                                 
                         return (
-                            <div key={inv.id} className="bg-slate-900 border border-white/5 p-5 rounded-[2rem] flex items-center justify-between group hover:border-emerald-500/20 transition-all">
+                            <div key={inv.id} className="bg-white border border-slate-100 p-5 rounded-[2rem] flex items-center justify-between group hover:border-emerald-500/20 transition-all shadow-sm">
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm ${
-                                        status === 'inside' || (isDelivery && inv.delivery_count > 0) ? 'bg-emerald-500/20 text-emerald-400' : 
-                                        status === 'completed' || (isDelivery && inv.delivery_count >= inv.delivery_quantity) ? 'bg-red-500/20 text-red-500' :
-                                        isDelivery ? 'bg-blue-500/20 text-blue-400' :
-                                        'bg-slate-800 text-slate-500'
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shadow-inner ${
+                                        status === 'inside' || (isDelivery && inv.delivery_count > 0) ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
+                                        status === 'completed' || (isDelivery && inv.delivery_count >= inv.delivery_quantity) ? 'bg-red-50 text-red-600 border border-red-100' :
+                                        isDelivery ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                                        'bg-slate-50 text-slate-400 border border-slate-100'
                                     }`}>
                                         {isDelivery ? <Zap className="w-5 h-5" /> : initChar}
                                     </div>
                                     <div>
-                                        <h4 className="font-black uppercase text-xs text-white group-hover:text-emerald-400 transition-colors">
-                                            {cleanName} {dniToShow && <span className="text-slate-500 ml-1">DNI {dniToShow}</span>}
+                                        <h4 className="font-black uppercase text-xs text-slate-900 group-hover:text-emerald-700 transition-colors">
+                                            {cleanName} {dniToShow && <span className="text-slate-400 ml-1">DNI {dniToShow}</span>}
                                         </h4>
-                                        <p className="text-[10px] font-black uppercase text-slate-500 mt-0.5 tracking-tight">
+                                        <p className="text-[10px] font-black uppercase text-slate-400 mt-0.5 tracking-tight">
                                             {inv.type === 'visit' ? 'VISITA' : inv.type === 'worker' ? 'TRABAJADOR' : inv.type === 'delivery' ? 'DELIVERY' : 'PERMANENTE'}
                                         </p>
                                         <div className="mt-2 flex items-center gap-2">
                                             {isDelivery ? (
                                                 <div className="flex flex-wrap gap-2">
                                                     {inv.delivery_count === 0 ? (
-                                                        <span className="text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Por ingresar al barrio</span>
+                                                        <span className="text-[8px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Por ingresar al barrio</span>
                                                     ) : (
                                                         <>
-                                                            <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">
+                                                            <span className="text-[8px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
                                                                 Ingresó ({inv.delivery_count} de {inv.delivery_quantity})
                                                             </span>
                                                             {(inv.delivery_exit_count || 0) > 0 && (
-                                                                <span className="text-[8px] font-black uppercase text-red-400 bg-red-400/10 px-2 py-0.5 rounded">
+                                                                <span className="text-[8px] font-black uppercase text-red-600 bg-red-50 px-2 py-0.5 rounded">
                                                                     Egresó ({inv.delivery_exit_count} de {inv.delivery_quantity})
                                                                 </span>
                                                             )}
                                                             {(inv.delivery_count - (inv.delivery_exit_count || 0)) > 0 && (
-                                                                <span className="text-[8px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded animate-pulse">
+                                                                <span className="text-[8px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded animate-pulse">
                                                                     {(inv.delivery_count - (inv.delivery_exit_count || 0))} en barrio
                                                                 </span>
                                                             )}
@@ -848,43 +850,37 @@ export default function OwnerDashboard() {
                                                 </div>
                                             ) : (
                                                 <>
-                                                    {status === 'no_registered' && <span className="text-[8px] font-black uppercase text-slate-400 bg-slate-800/50 px-2 py-0.5 rounded border border-white/5">Esperando Registro</span>}
-                                                    {status === 'pending' && <span className="text-[8px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded animate-pulse">Registro Pendiente</span>}
-                                                    {status === 'approved' && <span className="text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Por ingresar al barrio</span>}
-                                                    {status === 'inside' && <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">Ingresó al barrio</span>}
-                                                    {status === 'completed' && <span className="text-[8px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded">Salió del barrio</span>}
-                                                    {status === 'rejected' && <span className="text-[8px] font-black uppercase text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">Registro Rechazado</span>}
+                                                    {status === 'no_registered' && <span className="text-[8px] font-black uppercase text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">Esperando Registro</span>}
+                                                    {status === 'pending' && <span className="text-[8px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded animate-pulse">Registro Pendiente</span>}
+                                                    {status === 'approved' && <span className="text-[8px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Por ingresar al barrio</span>}
+                                                    {status === 'inside' && <span className="text-[8px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Ingresó al barrio</span>}
+                                                    {status === 'completed' && <span className="text-[8px] font-black uppercase text-red-600 bg-red-50 px-2 py-0.5 rounded">Salió del barrio</span>}
+                                                    {status === 'rejected' && <span className="text-[8px] font-black uppercase text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">Registro Rechazado</span>}
                                                 </>
                                             )}
 
                                             {isTenure && hasValidDates && (
-                                              <span className="text-[8px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Autorización Activa</span>
+                                              <span className="text-[8px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Autorización Activa</span>
                                             )}
                                             {inv.end_date && new Date(inv.end_date) < new Date(new Date().setHours(0,0,0,0)) && (
-                                                <span className="text-[8px] font-black uppercase text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">Autorización Vencida</span>
+                                                <span className="text-[8px] font-black uppercase text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">Autorización Vencida</span>
                                             )}
                                         </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {status === 'no_registered' && (
-                                        <button 
-                                          onClick={() => handleExpressAuthorization(inv)}
-                                          disabled={submitting}
-                                          className="p-3 bg-white/5 hover:bg-emerald-500 hover:text-white rounded-xl transition-all disabled:opacity-50"
-                                          title="AutorizaciÃ³n ExprÃ©s / Compartir"
-                                        >
-                                            <Share2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                    {status === 'approved' && (
+                                    {(status === 'no_registered' || status === 'approved') && (
                                         <button 
                                           onClick={() => {
-                                            const link = `${window.location.origin}/visitante/${inv.id}`;
-                                            setInvitationLink(link);
+                                            if (status === 'no_registered') handleExpressAuthorization(inv);
+                                            else {
+                                              const link = `${window.location.origin}/visitante/${inv.id}`;
+                                              setInvitationLink(link);
+                                            }
                                           }}
-                                          className="p-3 bg-white/5 hover:bg-emerald-500 hover:text-white rounded-xl transition-all"
-                                          title="Ver Pase / QR"
+                                          disabled={submitting}
+                                          className="p-3 bg-slate-50 hover:bg-emerald-600 hover:text-white text-slate-400 rounded-xl transition-all disabled:opacity-50 border border-slate-200 shadow-sm"
+                                          title={status === 'no_registered' ? "Autorización Exprés / Compartir" : "Ver Pase / QR"}
                                         >
                                             <Share2 className="w-4 h-4" />
                                         </button>
@@ -893,7 +889,7 @@ export default function OwnerDashboard() {
                                         <button 
                                           onClick={() => handleReAuthorize(inv)}
                                           disabled={submitting}
-                                          className="p-3 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-xl transition-all border border-emerald-500/20"
+                                          className="p-3 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl transition-all border border-emerald-100 shadow-sm"
                                           title="Acceso Express / Re-ingreso"
                                         >
                                             <Zap className="w-4 h-4 fill-current" />
@@ -903,13 +899,13 @@ export default function OwnerDashboard() {
                                         <div className="flex items-center gap-1">
                                             <button 
                                                 onClick={() => handleDeleteInvitation(inv.id)}
-                                                className="px-3 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all text-[9px] font-black uppercase tracking-widest"
+                                                className="px-3 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-500/10"
                                             >
                                                 Confirmar
                                             </button>
                                             <button 
                                                 onClick={() => setConfirmDeleteId(null)}
-                                                className="px-3 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-all text-[9px] font-black uppercase tracking-widest"
+                                                className="px-3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest border border-slate-200"
                                             >
                                                 Cancelar
                                             </button>
@@ -917,7 +913,7 @@ export default function OwnerDashboard() {
                                     ) : (
                                         <button 
                                             onClick={() => setConfirmDeleteId(inv.id)}
-                                            className="p-3 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all"
+                                            className="p-3 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-xl transition-all border border-red-100 shadow-sm"
                                             title="Eliminar Invitación"
                                         >
                                             <Trash2 className="w-4 h-4" />
@@ -928,36 +924,40 @@ export default function OwnerDashboard() {
                         );
                     })
                 ) : (
-                    <div className="py-12 bg-slate-900/20 rounded-3xl border border-dashed border-white/5 text-center">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No tienes invitaciones registradas</p>
+                    <div className="py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 text-center shadow-inner">
+                         <div className="flex flex-col items-center gap-4">
+                            <Users className="w-10 h-10 text-slate-300" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No tienes invitaciones registradas</p>
+                         </div>
                     </div>
                 )}
             </div>
         </div>
+
         {/* Configuración Modal */}
         <AnimatePresence>
           {showSettings && (
-            <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-6">
+            <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6">
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="bg-slate-900 w-full max-w-md border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden"
+                className="bg-white w-full max-w-md border border-slate-200 rounded-[3rem] shadow-2xl overflow-hidden"
               >
-                <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500">
+                    <div className="p-3 bg-white rounded-2xl text-emerald-600 shadow-sm border border-slate-200">
                       <Settings className="w-5 h-5" />
                     </div>
                     <div>
-                        <h2 className="text-3xl font-black uppercase tracking-tighter text-white">Hola, {userProfile?.full_name?.split(' ')[0]}</h2>
-                        <p className="text-[10px] font-black uppercase text-emerald-500 tracking-[0.3em] flex items-center gap-2">
-                          Portal de Propietario <span className="opacity-30 text-[8px]">v5.2</span>
+                        <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none">Ajustes</h2>
+                        <p className="text-[10px] font-black uppercase text-emerald-600 tracking-[0.3em] mt-2 leading-none">
+                           {userProfile?.full_name?.split(' ')[0]} <span className="opacity-30 text-[8px]">v6.5</span>
                         </p>
                     </div>
                   </div>
-                  <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-                    <X className="w-5 h-5 text-slate-500" />
+                  <button onClick={() => setShowSettings(false)} className="p-3 bg-white hover:bg-slate-100 rounded-full border border-slate-200 transition-colors shadow-sm">
+                    <X className="w-5 h-5 text-slate-400" />
                   </button>
                 </div>
 
@@ -965,39 +965,39 @@ export default function OwnerDashboard() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Nombre de Usuario</label>
                     <div className="relative">
-                      <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input 
                         type="text" 
                         value={newUsername} 
                         onChange={(e) => setNewUsername(e.target.value.toLowerCase())}
                         placeholder="nuevo_usuario"
-                        className="w-full bg-slate-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-white focus:border-emerald-500/50 outline-none transition-all"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 focus:border-emerald-500/50 outline-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Cambiar ContraseÃ±a</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Cambiar Contraseña</label>
                     <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input 
                         type="password" 
                         value={newPassword} 
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Nueva contraseña"
-                        className="w-full bg-slate-950 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-white focus:border-emerald-500/50 outline-none transition-all"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 focus:border-emerald-500/50 outline-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
 
                   {settingsError && (
-                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-[10px] font-black text-red-500 uppercase tracking-widest text-center">
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-[10px] font-black text-red-600 uppercase tracking-widest text-center">
                       {settingsError}
                     </div>
                   )}
 
                   {settingsSuccess && (
-                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center flex items-center justify-center gap-2">
+                    <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-[10px] font-black text-emerald-600 uppercase tracking-widest text-center flex items-center justify-center gap-2">
                       <CheckCircle className="w-4 h-4" /> {settingsSuccess}
                     </div>
                   )}
@@ -1005,7 +1005,7 @@ export default function OwnerDashboard() {
                   <button 
                     onClick={handleUpdateSettings}
                     disabled={isUpdating}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 mt-4"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/20 text-white transition-all flex items-center justify-center gap-3 mt-4 active:scale-95"
                   >
                     {isUpdating ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> Guardar Cambios</>}
                   </button>

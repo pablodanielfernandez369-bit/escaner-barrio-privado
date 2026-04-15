@@ -288,7 +288,7 @@ export default function VisitorPass() {
           <ShieldCheck className="w-8 h-8 text-emerald-500" />
         </div>
         <h1 className="text-xl font-black uppercase tracking-[0.2em] text-white">Barrio Seguro</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/70">Santa Inés • Acceso Digital <span className="opacity-30">v5.5</span></p>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/70">Santa Inés • Acceso Digital <span className="opacity-30">v6.5</span></p>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md">
@@ -360,7 +360,7 @@ export default function VisitorPass() {
               {step === 1 && (
                 <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
                   <div className="text-center mb-6">
-                    <h2 className="text-2xl font-black uppercase text-white mb-1">Paso 1 de 3</h2>
+                    <h2 className="text-2xl font-black uppercase text-white mb-1">Paso 1 de 4</h2>
                     <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Identificación</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -384,7 +384,7 @@ export default function VisitorPass() {
               {step === 2 && (
                 <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 flex flex-col items-center">
                   <div className="text-center mb-6">
-                    <h2 className="text-2xl font-black uppercase text-white mb-1">Paso 2 de 3</h2>
+                    <h2 className="text-2xl font-black uppercase text-white mb-1">Paso 2 de 4</h2>
                     <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Foto del Documento</p>
                   </div>
 
@@ -470,7 +470,7 @@ export default function VisitorPass() {
               {step === 3 && (
                 <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6 flex flex-col items-center">
                   <div className="text-center mb-6">
-                    <h2 className="text-2xl font-black uppercase text-white mb-1">Paso 3 de 3</h2>
+                    <h2 className="text-2xl font-black uppercase text-white mb-1">Paso 3 de 4</h2>
                     <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Selfie Biométrica</p>
                   </div>
 
@@ -573,71 +573,72 @@ export default function VisitorPass() {
                         </div>
 
                         {/* Fotos Seguro Vehículo */}
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-1 gap-6">
-                          <div className="space-y-3">
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center block">Frente del Seguro</label>
-                            <div className="aspect-[4/3] bg-slate-950 rounded-[2rem] relative overflow-hidden border-2 border-emerald-500/10 group shadow-xl flex items-center justify-center">
-                              {isCapturing && isCapturingInsurance === 'vehicle' ? (
-                                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                              ) : vehicleInsurancePhoto ? (
-                                <img src={vehicleInsurancePhoto} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-                                   <div className="p-4 bg-emerald-500/10 rounded-full">
-                                      <ShieldCheck className="w-8 h-8 text-emerald-500" />
-                                   </div>
-                                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest italic">Capturar frente</p>
-                                </div>
-                              )}
-                              {!vehicleInsurancePhoto && !isCapturing && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                                   <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2">
-                                     <Camera className="w-4 h-4" /> Tomar Foto
-                                   </button>
-                                </div>
-                              )}
-                              {vehicleInsurancePhoto && !isCapturing && (
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                                   <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="p-4 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-5 h-5" /></button>
-                                </div>
-                              )}
+                        <div className="space-y-6">
+                          <div className="flex flex-col gap-3 group">
+                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Frente del Seguro</p>
+                            <div className="aspect-[4/3] bg-slate-950 rounded-[2.5rem] overflow-hidden border-2 border-emerald-500/20 relative flex items-center justify-center shadow-2xl">
+                                {isCapturing && isCapturingInsurance === 'vehicle' ? (
+                                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                                ) : vehicleInsurancePhoto ? (
+                                  <img src={vehicleInsurancePhoto} className="w-full h-full object-cover" alt="Seguro Frente" />
+                                ) : (
+                                  <div className="flex flex-col items-center gap-2">
+                                     <div className="p-5 bg-emerald-500/10 rounded-full mb-2">
+                                       <ShieldCheck className="w-10 h-10 text-emerald-500" />
+                                     </div>
+                                     <p className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">Listo para capturar</p>
+                                  </div>
+                                )}
+                                {!vehicleInsurancePhoto && !isCapturing && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                     <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="px-8 py-4 bg-emerald-500 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-3 active:scale-95 transition-all">
+                                       <Camera className="w-5 h-5" /> Iniciar Cámara
+                                     </button>
+                                  </div>
+                                )}
+                                {vehicleInsurancePhoto && !isCapturing && (
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/40">
+                                     <button onClick={() => { setIsCapturingInsurance('vehicle'); startCamera(); }} className="p-5 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-6 h-6" /></button>
+                                  </div>
+                                )}
                             </div>
                           </div>
 
-                          <div className="space-y-3">
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center block">Dorso del Seguro</label>
-                            <div className="aspect-[4/3] bg-slate-950 rounded-[2rem] relative overflow-hidden border-2 border-emerald-500/10 group shadow-xl flex items-center justify-center">
-                              {isCapturing && isCapturingInsurance === 'vehicle_back' ? (
-                                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                              ) : vehicleInsuranceBackPhoto ? (
-                                <img src={vehicleInsuranceBackPhoto} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-                                   <div className="p-4 bg-emerald-500/10 rounded-full">
-                                      <ShieldCheck className="w-8 h-8 text-emerald-500" />
-                                   </div>
-                                   <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest italic">Capturar dorso</p>
-                                </div>
-                              )}
-                              {!vehicleInsuranceBackPhoto && !isCapturing && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                                   <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="px-6 py-3 bg-emerald-500 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2">
-                                     <Camera className="w-4 h-4" /> Tomar Foto
-                                   </button>
-                                </div>
-                              )}
-                              {vehicleInsuranceBackPhoto && !isCapturing && (
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                                   <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="p-4 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-5 h-5" /></button>
-                                </div>
-                              )}
+                          <div className="flex flex-col gap-3 group">
+                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Dorso del Seguro</p>
+                            <div className="aspect-[4/3] bg-slate-950 rounded-[2.5rem] overflow-hidden border-2 border-emerald-500/20 relative flex items-center justify-center shadow-2xl">
+                                {isCapturing && isCapturingInsurance === 'vehicle_back' ? (
+                                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                                ) : vehicleInsuranceBackPhoto ? (
+                                  <img src={vehicleInsuranceBackPhoto} className="w-full h-full object-cover" alt="Seguro Dorso" />
+                                ) : (
+                                  <div className="flex flex-col items-center gap-2">
+                                     <div className="p-5 bg-emerald-500/10 rounded-full mb-2">
+                                       <ShieldCheck className="w-10 h-10 text-emerald-500" />
+                                     </div>
+                                     <p className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">Listo para capturar</p>
+                                  </div>
+                                )}
+                                {!vehicleInsuranceBackPhoto && !isCapturing && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                     <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="px-8 py-4 bg-emerald-500 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-3 active:scale-95 transition-all">
+                                       <Camera className="w-5 h-5" /> Iniciar Cámara
+                                     </button>
+                                  </div>
+                                )}
+                                {vehicleInsuranceBackPhoto && !isCapturing && (
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/40">
+                                     <button onClick={() => { setIsCapturingInsurance('vehicle_back'); startCamera(); }} className="p-5 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-6 h-6" /></button>
+                                  </div>
+                                )}
                             </div>
                           </div>
-                        </div>
-                   
+
                           <div className="flex gap-2">
-                             <label className="flex-1 p-3 bg-slate-800 rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer text-[9px] font-black uppercase"><ImageIcon className="w-4 h-4" /> Desde Galería<input type="file" accept="image/*" className="hidden" onChange={(e) => { setIsCapturingInsurance('vehicle'); handleGalleryUpload(e); }} /></label>
+                             <label className="flex-1 p-4 bg-slate-800 rounded-2xl text-white flex items-center justify-center gap-3 cursor-pointer text-[10px] font-black uppercase border border-white/5 active:scale-95 transition-all">
+                               <ImageIcon className="w-4 h-4" /> Desde Galería
+                               <input type="file" accept="image/*" className="hidden" onChange={(e) => { setIsCapturingInsurance('vehicle'); handleGalleryUpload(e); }} />
+                             </label>
                           </div>
                         </div>
                       </motion.div>
@@ -663,41 +664,42 @@ export default function VisitorPass() {
                       </button>
 
                       {hasWorkInsurance && (
-                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 mt-4 bg-black/20 p-4 rounded-2xl">
-                          <div className="space-y-2">
-                            <label className="text-[8px] font-black uppercase text-slate-500 tracking-widest ml-4">Credencial / Póliza</label>
-                            <div className="flex items-center gap-3">
-                                <div className="flex-1 relative group aspect-[4/3]">
-                                  {isCapturing && isCapturingInsurance === 'work' ? (
-                                    <div className="w-full h-full bg-slate-950 rounded-[2rem] overflow-hidden border-2 border-emerald-500/10">
-                                      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                                      <button onClick={capturePhoto} className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-emerald-500 p-4 rounded-full shadow-2xl active:scale-95 transition-all"><Camera className="w-6 h-6 text-white" /></button>
-                                    </div>
-                                  ) : workInsurancePhoto ? (
-                                    <div className="w-full h-full bg-slate-950 rounded-[2rem] flex items-center justify-center border-2 border-emerald-500/10 overflow-hidden relative shadow-2xl">
-                                      <img src={workInsurancePhoto} className="w-full h-full object-cover" />
-                                      <button onClick={() => setWorkInsurancePhoto(null)} className="absolute top-4 right-4 bg-red-500/80 p-2 rounded-xl backdrop-blur-md transition-all active:scale-90"><X className="w-4 h-4 text-white" /></button>
-                                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                                         <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="p-5 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-6 h-6" /></button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="w-full h-full bg-slate-950 rounded-[2rem] flex flex-col items-center justify-center border-2 border-emerald-500/10 gap-3 shadow-2xl">
-                                      <div className="p-4 bg-emerald-500/10 rounded-full">
-                                        <Briefcase className="w-8 h-8 text-emerald-500" />
-                                      </div>
-                                      <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest text-center px-4">Certificado ART / Seguro</p>
-                                      <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="mt-4 px-6 py-3 bg-emerald-600 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2 active:scale-95 transition-all">
-                                        <Camera className="w-4 h-4" /> Iniciar Cámara
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              <div className="flex-1 flex flex-col gap-2">
-                                <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="p-3 bg-blue-600 rounded-xl text-white flex items-center justify-center gap-2"><Camera className="w-4 h-4" /></button>
-                                <label className="p-3 bg-slate-800 rounded-xl text-white flex items-center justify-center gap-2 cursor-pointer"><ImageIcon className="w-4 h-4" /><input type="file" accept="image/*" className="hidden" onChange={(e) => { setIsCapturingInsurance('work'); handleGalleryUpload(e); }} /></label>
-                              </div>
+                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 mt-4 bg-black/20 p-6 rounded-[2.5rem]">
+                          <div className="flex flex-col gap-3 group">
+                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Credencial / Póliza / ART</p>
+                            <div className="aspect-[4/3] bg-slate-950 rounded-[2.5rem] overflow-hidden border-2 border-emerald-500/20 relative flex items-center justify-center shadow-2xl">
+                                {isCapturing && isCapturingInsurance === 'work' ? (
+                                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                                ) : workInsurancePhoto ? (
+                                  <img src={workInsurancePhoto} className="w-full h-full object-cover" alt="ART" />
+                                ) : (
+                                  <div className="flex flex-col items-center gap-2">
+                                     <div className="p-5 bg-emerald-500/10 rounded-full mb-2">
+                                       <Briefcase className="w-10 h-10 text-emerald-500" />
+                                     </div>
+                                     <p className="text-[10px] font-black uppercase text-emerald-500 tracking-widest">Listo para capturar</p>
+                                  </div>
+                                )}
+                                {!workInsurancePhoto && !isCapturing && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                     <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="px-8 py-4 bg-emerald-500 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-3 active:scale-95 transition-all">
+                                       <Camera className="w-5 h-5" /> Iniciar Cámara
+                                     </button>
+                                  </div>
+                                )}
+                                {workInsurancePhoto && !isCapturing && (
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/40">
+                                     <button onClick={() => { setIsCapturingInsurance('work'); startCamera(); }} className="p-5 bg-emerald-500 rounded-full text-white shadow-xl"><Camera className="w-6 h-6" /></button>
+                                  </div>
+                                )}
                             </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                             <label className="flex-1 p-4 bg-slate-800 rounded-2xl text-white flex items-center justify-center gap-3 cursor-pointer text-[10px] font-black uppercase border border-white/5 active:scale-95 transition-all">
+                               <ImageIcon className="w-4 h-4" /> Desde Galería
+                               <input type="file" accept="image/*" className="hidden" onChange={(e) => { setIsCapturingInsurance('work'); handleGalleryUpload(e); }} />
+                             </label>
                           </div>
                         </motion.div>
                       )}

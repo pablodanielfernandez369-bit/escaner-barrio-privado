@@ -458,7 +458,7 @@ export default function GuardiaPortal() {
     if (data) setPermanentes(data);
   };
 
-  // Disparar pre-carga cuando IA y Datos estÃ©n listos
+  // Disparar pre-carga cuando IA y Datos estén listos
   useEffect(() => {
       if (isFaceApiLoaded && (expectedToday.length > 0 || insideNeighborhood.length > 0 || allOwners.length > 0 || trabajadores.length > 0 || permanentes.length > 0)) {
           const pool = [...expectedToday, ...insideNeighborhood, ...allOwners, ...trabajadores, ...permanentes] as any[];
@@ -829,7 +829,7 @@ export default function GuardiaPortal() {
           })
           .eq('id', id)
           .select('invitation_id')
-          .single();
+          .maybeSingle();
         
         recordData = updRecord;
         error = updError;
@@ -844,7 +844,7 @@ export default function GuardiaPortal() {
         if (newStatus === 'inside') statusMarker = " [INGRESÓ]";
         if (newStatus === 'completed') statusMarker = " [SALIÓ]";
         
-        const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', targetInvId).single();
+        const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', targetInvId).maybeSingle();
         if (currentInv) {
           const cleanName = currentInv.visitor_name.split(" [")[0];
           await supabase.from('invitations').update({ 
@@ -876,7 +876,7 @@ export default function GuardiaPortal() {
       .update(updatePayload)
       .eq('id', recordId)
       .select()
-      .single();
+      .maybeSingle();
     
     if (error) {
       console.error("ERROR SUPABASE AL APROBAR:", error);
@@ -908,67 +908,55 @@ export default function GuardiaPortal() {
           work_insurance_url,
           insurance_status,
           status: 'active',
-          face_descriptor
+          face_descriptor: Array.isArray(face_descriptor) ? face_descriptor : null
         }, { onConflict: 'dni' });
+
+      if (upsertError) {
+        console.error("DEBUG: Error al guardar en 'visitors':", upsertError);
+      }
 
       // Routing basado en el tipo de invitación
       const { data: invData } = await supabase
         .from('invitations')
         .select('type, category, start_date, end_date, profiles(full_name)')
         .eq('id', invitation_id)
-        .single();
+        .maybeSingle();
 
       if (invData) {
+        const masterPayload = {
+          dni,
+          full_name: full_name.toUpperCase(),
+          category: invData.type === 'worker' ? (invData.category || 'SIN CATEGORÍA') : 'Residente / Frecuente',
+          employer: (Array.isArray(invData.profiles) ? (invData.profiles as any)[0]?.full_name : (invData.profiles as any)?.full_name) || 'Particular',
+          status: 'active',
+          face_descriptor: Array.isArray(face_descriptor) ? face_descriptor : null,
+          start_date: invData.start_date,
+          end_date: invData.end_date,
+          invitation_id: invitation_id,
+          dni_front_url,
+          dni_back_url,
+          selfie_url,
+          vehicle_patente,
+          vehicle_modelo,
+          vehicle_anio,
+          vehicle_insurance_url,
+          vehicle_insurance_back_url,
+          work_insurance_url,
+          insurance_status
+        };
+
         if (invData.type === 'worker') {
-          await supabase.from('trabajadores').upsert({
-            dni,
-            full_name: full_name.toUpperCase(),
-            category: invData.category || 'SIN CATEGORÍA',
-            employer: (Array.isArray(invData.profiles) ? (invData.profiles as any)[0]?.full_name : (invData.profiles as any)?.full_name) || 'Particular',
-            status: 'active',
-            face_descriptor,
-            start_date: invData.start_date,
-            end_date: invData.end_date,
-            invitation_id: invitation_id,
-            dni_front_url,
-            dni_back_url,
-            selfie_url,
-            vehicle_patente,
-            vehicle_modelo,
-            vehicle_anio,
-            vehicle_insurance_url,
-            vehicle_insurance_back_url,
-            work_insurance_url,
-            insurance_status
-          }, { onConflict: 'dni' });
+          const { error: wErr } = await supabase.from('trabajadores').upsert(masterPayload, { onConflict: 'dni' });
+          if (wErr) console.error("DEBUG: Error al guardar en 'trabajadores':", wErr);
         } else if (invData.type === 'permanent') {
-          await supabase.from('permanentes').upsert({
-            dni,
-            full_name: full_name.toUpperCase(),
-            category: 'Residente / Frecuente',
-            employer: (Array.isArray(invData.profiles) ? (invData.profiles as any)[0]?.full_name : (invData.profiles as any)?.full_name) || 'Particular',
-            status: 'active',
-            face_descriptor,
-            start_date: invData.start_date,
-            end_date: invData.end_date,
-            invitation_id: invitation_id,
-            dni_front_url,
-            dni_back_url,
-            selfie_url,
-            vehicle_patente,
-            vehicle_modelo,
-            vehicle_anio,
-            vehicle_insurance_url,
-            vehicle_insurance_back_url,
-            work_insurance_url,
-            insurance_status
-          }, { onConflict: 'dni' });
+          const { error: pErr } = await supabase.from('permanentes').upsert(masterPayload, { onConflict: 'dni' });
+          if (pErr) console.error("DEBUG: Error al guardar en 'permanentes':", pErr);
         }
       }
 
       // FIX SINCRONIZACIÓN ESTADO: Añadir [APROBADO] a la invitación para que el Propietario lo reciba.
       if (invitation_id && !andEnter) {
-         const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', invitation_id).single();
+         const { data: currentInv } = await supabase.from('invitations').select('visitor_name').eq('id', invitation_id).maybeSingle();
          if (currentInv) {
            const cleanName = currentInv.visitor_name.split(" [")[0];
            await supabase.from('invitations').update({ visitor_name: cleanName + " [APROBADO]" }).eq('id', invitation_id);
@@ -1351,10 +1339,10 @@ export default function GuardiaPortal() {
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center font-black text-emerald-500 uppercase tracking-widest animate-pulse">Cargando sistema...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white">
       
       {zoomedImg && (
-        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setZoomedImg(null)}>
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setZoomedImg(null)}>
            <img src={zoomedImg} className="max-w-full max-h-full rounded-2xl shadow-2xl" alt="Zoom" />
         </div>
       )}
@@ -1421,7 +1409,7 @@ export default function GuardiaPortal() {
             <div className="absolute top-8 inset-x-8 z-50 flex items-center justify-between pointer-events-none">
                 <div className="bg-black/30 backdrop-blur-md px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Terminal v2.0 • Biometría Activa</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/50">Terminal v6.5 • Biometría Activa</span>
                 </div>
                 <button 
                   onClick={stopCamera}
@@ -1438,43 +1426,45 @@ export default function GuardiaPortal() {
       <div className="max-w-6xl mx-auto p-4 sm:p-8">
         <header className="flex flex-col sm:flex-row justify-between gap-6 mb-12">
           <div className="flex items-center gap-4">
-            <Building2 className="w-10 h-10 text-emerald-400" />
+            <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-200">
+              <Building2 className="w-10 h-10 text-emerald-600" />
+            </div>
             <div>
-              <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">Barrio Seguro</h1>
-              <p className="text-emerald-400 font-black uppercase tracking-[0.3em] text-[10px]">Santa Inés • Guardia</p>
+              <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">Barrio Seguro</h1>
+              <p className="text-emerald-600 font-black uppercase tracking-[0.3em] text-[10px]">Santa Inés • Guardia</p>
             </div>
           </div>
-          <button onClick={() => { supabase.auth.signOut(); router.push("/"); }} className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl border border-red-500/20 text-[10px] font-black uppercase tracking-widest transition-all">Salir</button>
+          <button onClick={() => { supabase.auth.signOut(); router.push("/"); }} className="px-6 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">Salir</button>
         </header>
 
-        <div className="flex p-1 bg-slate-900 rounded-2xl border border-white/5 mb-8 w-fit overflow-x-auto gap-1">
+        <div className="flex p-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm mb-8 w-fit overflow-x-auto gap-1">
           {['accesos', 'salidas', 'delivery', 'registros', 'identidades', 'trabajadores', 'permanentes', 'historial', 'propietarios', 'config'].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab as any)} className={`relative px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+            <button key={tab} onClick={() => setActiveTab(tab as any)} className={`relative px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
               {tab === 'registros' ? (
                 <>
                     {`Registros (${pendingVisitors.length + pendingOwners.length})`}
                     {(pendingVisitors.length + pendingOwners.length) > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center text-[8px] animate-pulse">!</span>
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center text-[8px] animate-pulse border-2 border-white">!</span>
                     )}
                 </>
               ) : tab === 'delivery' ? (
                 <>
                   {`Delivery (${deliveryInvitations.filter(d => d.delivery_count < d.delivery_quantity).length})`}
                   {deliveryInvitations.some(d => d.delivery_count < d.delivery_quantity) && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[8px] animate-pulse">!</span>
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[8px] animate-pulse border-2 border-white">!</span>
                   )}
                 </>
-              ) : tab === 'identidades' ? 'Identidades' : tab === 'trabajadores' ? 'Trabajadores' : tab === 'permanentes' ? 'Permanentes' : tab}
+              ) : tab === 'identidades' ? 'Identidades' : tab === 'trabajadores' ? 'Trabajadores' : tab === 'permanentes' ? 'Permanentes' : tab === 'config' ? 'Config' : tab}
             </button>
           ))}
         </div>
 
         {activeTab === 'accesos' && (
             <div className="space-y-12">
-                <div className="bg-emerald-600/10 border border-emerald-500/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="bg-emerald-50 border border-emerald-100 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
                     <div>
-                        <h3 className="text-xl font-black uppercase tracking-tighter mb-2">Escáner IA Inteligente</h3>
-                        <p className="text-emerald-500 text-[10px] font-black uppercase tracking-wide">✅ El visitante fue autorizado automáticamente usando sus datos biométricos previos.</p>
+                        <h3 className="text-xl font-black uppercase tracking-tighter mb-2 text-slate-900">Escáner IA Inteligente</h3>
+                        <p className="text-emerald-700 text-[10px] font-bold uppercase tracking-wide">Acceso automático mediante reconocimiento facial biométrico.</p>
                     </div>
                     <button 
                         disabled={!isFaceApiLoaded}
@@ -1485,7 +1475,7 @@ export default function GuardiaPortal() {
                           } catch (e) {}
                           startCamera(true, null, true);
                         }}
-                        className="bg-emerald-600 hover:bg-emerald-500 px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-600/30 flex items-center gap-3 transition-all active:scale-95"
+                        className="bg-emerald-600 hover:bg-emerald-700 px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/10 flex items-center gap-3 transition-all active:scale-95 text-white"
                     >
                         {isFaceApiLoaded ? <><Camera className="w-5 h-5" /> Iniciar IA</> : <Loader2 className="w-5 h-5 animate-spin" />}
                     </button>
@@ -1493,27 +1483,27 @@ export default function GuardiaPortal() {
 
                 {expectedToday.length > 0 && (
                 <div className="grid grid-cols-1 gap-2">
-                    <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em] ml-4 mb-2">Invitados en camino ({expectedToday.length})</h4>
+                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] ml-4 mb-2">Invitados en camino ({expectedToday.length})</h4>
                     {expectedToday.map(v => {
                         const displayName = (v as any).visitor_name || v.full_name || '—';
                         const displayLote = (v as any).profiles?.lote || v.invitations?.profiles?.lote || '—';
                         return (
                         <div key={v.id} 
-                            className="bg-white/5 p-4 rounded-xl border border-white/5 flex items-center justify-between group cursor-pointer hover:bg-emerald-500/5 transition-all"
+                            className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between group cursor-pointer hover:bg-slate-50 transition-all shadow-sm"
                         >
-                            <div onClick={async () => {
+                            <div className="flex-1" onClick={async () => {
                               try {
                                 if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
                                 else if ((document.documentElement as any).webkitRequestFullscreen) await (document.documentElement as any).webkitRequestFullscreen();
                               } catch (e) {}
                               startCamera(true, v);
                             }}>
-                                <p className="font-bold uppercase tracking-tight text-white group-hover:text-emerald-400">{displayName}</p>
-                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Lote {displayLote}</p>
+                                <p className="font-extrabold uppercase tracking-tight text-slate-900 group-hover:text-emerald-700 transition-colors">{displayName}</p>
+                                <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest">Lote {displayLote}</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => handleStatusUpdate(v.id, 'inside', (v as any).invitations?.id || (v as any).id)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest">Ingresar</button>
-                                <button onClick={() => handleDeleteRecord(v.id)} className="p-2 text-slate-700 hover:text-red-500"><X className="w-4 h-4" /></button>
+                                <button onClick={() => handleStatusUpdate(v.id, 'inside', (v as any).invitations?.id || (v as any).id)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all active:scale-95">Ingresar</button>
+                                <button onClick={() => handleDeleteRecord(v.id)} className="p-3 text-slate-400 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
                             </div>
                         </div>
                         );
@@ -1526,17 +1516,17 @@ export default function GuardiaPortal() {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4">
                   <div>
-                    <h2 className="text-white font-black uppercase tracking-widest text-xs">Control de Deliveries</h2>
-                    <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mt-1">Autorizados para el día de hoy</p>
+                    <h2 className="text-slate-900 font-extrabold uppercase tracking-widest text-xs">Control de Deliveries</h2>
+                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mt-1">Autorizados para el día de hoy</p>
                   </div>
                   <div className="relative w-full sm:w-64">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input 
                         type="text"
                         placeholder="BUSCAR POR LOTE O NOMBRE..."
                         value={deliverySearch}
                         onChange={(e) => setDeliverySearch(e.target.value)}
-                        className="w-full bg-slate-900 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-blue-500/50 transition-all"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-blue-500/50 transition-all shadow-inner"
                     />
                   </div>
                 </div>
@@ -1561,25 +1551,25 @@ export default function GuardiaPortal() {
                             const insideNow = entries - exits;
 
                             return (
-                                <div key={inv.id} className="bg-slate-900 border border-blue-500/20 shadow-md p-3 rounded-2xl transition-all relative overflow-hidden group">
+                                <div key={inv.id} className="bg-white border border-slate-200 shadow-sm p-3 rounded-2xl transition-all relative overflow-hidden group hover:shadow-lg hover:border-blue-200">
                                     <div className="flex items-center gap-3">
                                         {/* Izquierda: Lote */}
-                                        <div className="bg-slate-950 px-2.5 py-1.5 rounded-xl border border-white/5 text-center min-w-[45px]">
-                                            <span className="text-[6px] font-black text-slate-600 block uppercase leading-none mb-1">Lote</span>
-                                            <span className="text-base font-black text-white leading-none">{inv.profiles?.lote}</span>
+                                        <div className="bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100 text-center min-w-[45px] shadow-inner">
+                                            <span className="text-[6px] font-black text-slate-400 block uppercase leading-none mb-1">Lote</span>
+                                            <span className="text-base font-black text-slate-900 leading-none">{inv.profiles?.lote}</span>
                                         </div>
 
                                         {/* Centro: Info */}
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[9px] font-black text-white uppercase truncate mb-0.5">{inv.profiles?.full_name}</p>
+                                            <p className="text-[9px] font-black text-slate-900 uppercase truncate mb-0.5">{inv.profiles?.full_name}</p>
                                             <div className="flex items-center gap-3">
                                                 <div className="flex items-center gap-1">
-                                                    <LogIn className="w-2.5 h-2.5 text-blue-400" />
-                                                    <span className="text-[9px] font-black text-blue-400">{entries}/{max}</span>
+                                                    <LogIn className="w-2.5 h-2.5 text-blue-600" />
+                                                    <span className="text-[9px] font-black text-blue-600">{entries}/{max}</span>
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    <LogOutIcon className="w-2.5 h-2.5 text-red-400" />
-                                                    <span className="text-[9px] font-black text-red-400">{exits}/{max}</span>
+                                                    <LogOutIcon className="w-2.5 h-2.5 text-red-600" />
+                                                    <span className="text-[9px] font-black text-red-600">{exits}/{max}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1591,8 +1581,8 @@ export default function GuardiaPortal() {
                                                 onClick={() => handleDeliveryAction(inv, 'entry')}
                                                 className={`px-3 py-1.5 rounded-lg font-black text-[7px] uppercase tracking-tighter transition-all active:scale-95 flex items-center justify-center gap-1 ${
                                                     isFullyEntered 
-                                                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
-                                                    : 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm'
+                                                    ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/10'
                                                 }`}
                                             >
                                                 <LogIn className="w-2.5 h-2.5" /> Ingreso
@@ -1602,8 +1592,8 @@ export default function GuardiaPortal() {
                                                 onClick={() => handleDeliveryAction(inv, 'exit')}
                                                 className={`px-3 py-1.5 rounded-lg font-black text-[7px] uppercase tracking-tighter transition-all active:scale-95 flex items-center justify-center gap-1 ${
                                                     insideNow <= 0 
-                                                    ? 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
-                                                    : 'bg-red-600 hover:bg-red-500 text-white shadow-sm'
+                                                    ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                                                    : 'bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-500/10'
                                                 }`}
                                             >
                                                 <LogOutIcon className="w-2.5 h-2.5" /> Egreso
@@ -1614,9 +1604,9 @@ export default function GuardiaPortal() {
                             );
                         })
                     ) : (
-                        <div className="col-span-full py-16 bg-slate-900/50 rounded-3xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
-                            <Zap className="w-10 h-10 text-slate-800 mb-3" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay pases de delivery que coincidan</p>
+                        <div className="col-span-full py-16 bg-white rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
+                            <Zap className="w-10 h-10 text-slate-200 mb-3" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay pases de delivery que coincidan</p>
                         </div>
                     )}
                 </div>
@@ -1625,10 +1615,10 @@ export default function GuardiaPortal() {
 
         {activeTab === 'salidas' && (
             <div className="space-y-12">
-                <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="bg-red-50 border border-red-100 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
                     <div>
-                        <h3 className="text-xl font-black uppercase tracking-tighter mb-2">Escáner IA de Salida</h3>
-                        <p className="text-red-500 text-[10px] font-black uppercase tracking-widest">Reconomiento facial para registrar egresos</p>
+                        <h3 className="text-xl font-black uppercase tracking-tighter mb-2 text-slate-900">Escáner IA de Salida</h3>
+                        <p className="text-red-700 text-[10px] font-extrabold uppercase tracking-wide">Reconocimiento facial para registrar egresos</p>
                     </div>
                     <button 
                         disabled={!isFaceApiLoaded}
@@ -1639,29 +1629,29 @@ export default function GuardiaPortal() {
                           } catch (e) {}
                           startCamera(true, null, true);
                         }}
-                        className="bg-red-600 hover:bg-red-500 px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-red-600/30 flex items-center gap-3 transition-all active:scale-95"
+                        className="bg-red-600 hover:bg-red-700 text-white px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-red-500/10 flex items-center gap-3 transition-all active:scale-95"
                     >
                         {isFaceApiLoaded ? <><Camera className="w-5 h-5" /> Iniciar IA de Salida</> : <Loader2 className="w-5 h-5 animate-spin" />}
                     </button>
                 </div>
 
                 <div className="flex items-center gap-3 mb-6 ml-4">
-                    <LogOutIcon className="w-5 h-5 text-red-500" />
+                    <LogOutIcon className="w-5 h-5 text-red-600" />
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Personas en el Barrio ({insideNeighborhood.length})</h3>
                 </div>
                 
                 {insideNeighborhood.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {insideNeighborhood.map(v => (
-                      <div key={v.id} className="bg-slate-900 border border-white/5 p-6 rounded-3xl flex items-center justify-between group">
+                      <div key={v.id} className="bg-white border border-slate-200 p-6 rounded-3xl flex items-center justify-between group shadow-sm hover:border-red-200 transition-all">
                           <div>
-                              <h4 className="font-black uppercase text-white mb-1 group-hover:text-red-400 transition-colors">{v.full_name}</h4>
-                              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">INGRESÓ A LAS {new Date(v.entry_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                              <h4 className="font-extrabold uppercase text-slate-900 mb-1 group-hover:text-red-600 transition-colors">{v.full_name}</h4>
+                              <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">INGRESÓ A LAS {new Date(v.entry_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                           </div>
                           <div className="flex items-center gap-2">
                                      <button 
                                          onClick={() => handleStatusUpdate(v.id, 'completed', (v as any).invitations?.id)}
-                                         className="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-red-500/20 transition-all flex items-center gap-2"
+                                         className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-red-500/10 transition-all flex items-center gap-2 active:scale-95"
                                      >
                                          <LogOut className="w-4 h-4" />
                                          Confirmar Salida
@@ -1671,9 +1661,9 @@ export default function GuardiaPortal() {
                     ))}
                   </div>
                 ) : (
-                  <div className="py-20 bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
-                      <LogOutIcon className="w-12 h-12 text-slate-800 mb-4" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay visitas activas dentro del barrio</p>
+                  <div className="py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
+                      <LogOutIcon className="w-12 h-12 text-slate-300 mb-4" />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay visitas activas dentro del barrio</p>
                   </div>
                 )}
             </div>
@@ -1682,20 +1672,20 @@ export default function GuardiaPortal() {
         {activeTab === 'registros' && (
             <div className="space-y-4">
                 <div className="flex items-center gap-3 mb-6 ml-4">
-                    <ShieldPlus className="w-5 h-5 text-amber-500" />
+                    <ShieldPlus className="w-5 h-5 text-amber-600" />
                     <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Auditoría de Identidad ({pendingVisitors.length + pendingOwners.length})</h3>
                 </div>
                 
                 {(pendingVisitors.length + pendingOwners.length) > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {pendingOwners.map(v => (
-                        <div key={v.id} className="bg-slate-900 border border-white/5 p-6 rounded-[2.5rem] flex items-center justify-between group hover:border-emerald-500/20 transition-all">
+                        <div key={v.id} className="bg-white border border-slate-200 p-6 rounded-[2.5rem] flex items-center justify-between group hover:border-emerald-500 shadow-sm transition-all hover:shadow-xl hover:shadow-emerald-500/10">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-400 group-hover:scale-110 transition-transform">
+                                <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform">
                                     <Home className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h4 className="font-black uppercase text-white group-hover:text-emerald-400 transition-colors">{v.full_name}</h4>
+                                    <h4 className="font-black uppercase text-slate-900 group-hover:text-emerald-600 transition-colors">{v.full_name}</h4>
                                     <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">NUEVO VECINO • LOTE {v.lote}</p>
                                 </div>
                             </div>
@@ -1713,13 +1703,13 @@ export default function GuardiaPortal() {
                     ))}
 
                     {pendingVisitors.map(v => (
-                        <div key={v.id} className="bg-slate-900 border border-white/5 p-6 rounded-[2.5rem] flex items-center justify-between group hover:border-emerald-500/20 transition-all">
+                        <div key={v.id} className="bg-white border border-slate-200 p-6 rounded-[2.5rem] flex items-center justify-between group hover:border-blue-500 shadow-sm transition-all hover:shadow-xl hover:shadow-blue-500/10">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-400 group-hover:scale-110 transition-transform">
+                                <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform">
                                     <ShieldAlert className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h4 className="font-black uppercase text-white group-hover:text-blue-400 transition-colors">{v.full_name}</h4>
+                                    <h4 className="font-black uppercase text-slate-900 group-hover:text-blue-600 transition-colors">{v.full_name}</h4>
                                     <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">VISITA • LOTE {v.invitations?.profiles?.lote}</p>
                                 </div>
                             </div>
@@ -1737,9 +1727,9 @@ export default function GuardiaPortal() {
                     ))}
                   </div>
                 ) : (
-                  <div className="py-20 bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
-                      <ShieldCheck className="w-12 h-12 text-slate-800 mb-4" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay registros pendientes de revisión</p>
+                  <div className="py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
+                      <ShieldCheck className="w-12 h-12 text-slate-300 mb-4" />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay registros pendientes de revisión</p>
                   </div>
                 )}
             </div>
@@ -1747,259 +1737,94 @@ export default function GuardiaPortal() {
 
 
 
-        {viewingAuth && (
-            <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300 overflow-y-auto">
-                <div className="bg-slate-900 w-full max-w-4xl border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden my-8">
-                    <div className="p-8 border-b border-white/5 flex items-center justify-between">
-                        <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white">{viewingAuth.full_name}</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Auditoría de Identidad • DNI {viewingAuth.dni}</p>
-                        </div>
-                            <button onClick={() => { setViewingAuth(null); setVisitorHistory([]); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors"><X className="w-6 h-6" /></button>
-                    </div>
-                    
-                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div>
-                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Documentación Capturada</p>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-2">
-                                    <p className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Selfie</p>
-                                    <div onClick={() => setZoomedImg(viewingAuth.selfie_url)} className="relative aspect-square rounded-2xl overflow-hidden border border-white/5 group bg-slate-950 flex items-center justify-center cursor-zoom-in">
-                                        {viewingAuth.selfie_url ? (
-                                            <img src={viewingAuth.selfie_url} className="w-full h-full object-cover" alt="Selfie" />
-                                        ) : (
-                                            <div className="flex flex-col items-center gap-2 opacity-20"><Camera className="w-8 h-8" /></div>
-                                        )}
-                                        <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <p className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">DNI Frontal</p>
-                                    <div onClick={() => setZoomedImg(viewingAuth.dni_front_url)} className="relative aspect-square rounded-2xl overflow-hidden border border-white/5 group bg-slate-950 flex items-center justify-center cursor-zoom-in">
-                                        {viewingAuth.dni_front_url ? (
-                                            <img src={viewingAuth.dni_front_url} className="w-full h-full object-cover" alt="DNI" />
-                                        ) : (
-                                            <div className="flex flex-col items-center gap-2 opacity-20"><ImageIcon className="w-8 h-8" /></div>
-                                        )}
-                                        <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                </div>
-                                
-                                {viewingAuth.vehicle_insurance_url && (
-                                    <div className="space-y-2">
-                                        <p className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Seguro Auto</p>
-                                        <div onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_url)} className="relative aspect-square rounded-2xl overflow-hidden border border-white/5 group bg-slate-950 flex items-center justify-center cursor-zoom-in">
-                                            <img src={viewingAuth.vehicle_insurance_url} className="w-full h-full object-cover" alt="Seguro Auto" />
-                                            <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </div>
-                                    </div>
-                                )}
 
-                                {viewingAuth.work_insurance_url && (
-                                    <div className="space-y-2">
-                                        <p className="text-[8px] font-black uppercase text-slate-600 tracking-widest ml-1">Seguro Trabajo</p>
-                                        <div onClick={() => setZoomedImg(viewingAuth.work_insurance_url)} className="relative aspect-square rounded-2xl overflow-hidden border border-white/5 group bg-slate-950 flex items-center justify-center cursor-zoom-in">
-                                            <img src={viewingAuth.work_insurance_url} className="w-full h-full object-cover" alt="Seguro Trabajo" />
-                                            <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="space-y-6">
-                             {/* Datos del Vehículo */}
-                             {viewingAuth.vehicle_patente && (
-                                 <div className="bg-white/5 border border-white/5 p-6 rounded-[2rem] space-y-4">
-                                     <div className="flex items-center gap-3">
-                                         <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
-                                             <Car className="w-5 h-5" />
-                                         </div>
-                                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Datos del Vehículo</p>
-                                     </div>
-                                     <div className="grid grid-cols-2 gap-4">
-                                         <div>
-                                             <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Patente</p>
-                                             <p className="text-xl font-black uppercase text-emerald-400">{viewingAuth.vehicle_patente}</p>
-                                         </div>
-                                         <div>
-                                             <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Año</p>
-                                             <p className="text-sm font-black uppercase text-white">{viewingAuth.vehicle_anio || 'N/A'}</p>
-                                         </div>
-                                     </div>
-                                     <div>
-                                         <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Modelo / Marca</p>
-                                         <p className="text-sm font-black uppercase text-white">{viewingAuth.vehicle_modelo || 'N/A'}</p>
-                                     </div>
-                                 </div>
-                             )}
-
-                             <div className="space-y-4">
-                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2">Historial Reciente</p>
-                                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-                                   {visitorHistory.length > 0 ? visitorHistory.map(h => (
-                                       <div key={h.id} className="bg-white/5 border border-white/5 p-4 rounded-2xl">
-                                           <div className="flex justify-between items-center mb-1">
-                                               <p className="text-[10px] font-black uppercase text-white">Lote {h.invitations?.profiles?.lote}</p>
-                                               <p className="text-[8px] font-black text-slate-500">{new Date(h.updated_at).toLocaleDateString('es-AR')}</p>
-                                           </div>
-                                           <p className="text-[9px] font-black uppercase text-emerald-500/70 tracking-widest">
-                                               {h.status === 'completed' ? 'Salida' : 'Ingreso'} • {new Date(h.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs
-                                           </p>
-                                       </div>
-                                   )) : (
-                                       <div className="py-10 bg-white/5 rounded-2xl text-center border border-dashed border-white/5">
-                                           <p className="text-[9px] font-black uppercase text-slate-600 italic">No hay ingresos previos registrados</p>
-                                       </div>
-                                   )}
-                                </div>
-                             </div>
-                        </div>
-                    </div>
-
-                    <div className="p-8 bg-black/20 border-t border-white/5 flex flex-col sm:flex-row gap-4 items-center justify-between">
-                        <div className="flex flex-col gap-2 w-full sm:w-auto">
-                            {!viewingAuth.face_descriptor && (
-                                <button 
-                                    disabled={isDetecting}
-                                    onClick={handleAnalizarBiometria}
-                                    className="px-6 py-3 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white rounded-2xl border border-blue-500/20 font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2"
-                                >
-                                    {isDetecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                                    Analizar Biometría
-                                </button>
-                            )}
-                            {viewingAuth.face_descriptor && (
-                                <div className="px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 font-black text-[9px] uppercase tracking-widest flex items-center gap-2">
-                                    <ShieldCheck className="w-4 h-4" />
-                                    Identidad Digital Generada
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="flex gap-4 w-full sm:w-auto">
-                        {viewingAuth.status === 'pending' ? (
-                          <>
-                            <button 
-                                onClick={() => viewingAuth.isOwner ? handleAuthorizeOwner(viewingAuth.id) : handleApproveVisitor(viewingAuth.id)}
-                                className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-500 px-8 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-3"
-                            >
-                                <CheckCircle className="w-5 h-5" />
-                                {viewingAuth.isOwner ? 'Activar Propietario' : 'Aprobar Identidad'}
-                            </button>
-                            <button 
-                                onClick={() => viewingAuth.isOwner ? handleBlockOwner(viewingAuth.id, 'pending') : handleRejectVisitor(viewingAuth.id)}
-                                className="flex-1 sm:flex-initial bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-8 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3"
-                            >
-                                <UserX className="w-5 h-5" />
-                                {viewingAuth.isOwner ? 'Rechazar' : 'Rechazar'}
-                            </button>
-                          </>
-                        ) : (
-                          <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-6">
-                             <div className="flex items-center gap-3 px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 font-black text-xs uppercase tracking-widest">
-                                <ShieldCheck className="w-5 h-5" />
-                                Identidad Verificada
-                             </div>
-                             <button 
-                                onClick={() => setViewingAuth(null)}
-                                className="w-full sm:w-auto px-12 bg-slate-800 hover:bg-slate-700 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all active:scale-95"
-                             >
-                                Cerrar Ficha
-                             </button>
-                          </div>
-                        )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )}
 
         {activeTab === 'config' && (
             <div className="max-w-xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="bg-slate-900 border border-white/5 p-10 rounded-[3rem] shadow-2xl">
+                <div className="bg-white border border-slate-200 p-10 rounded-[3rem] shadow-xl shadow-slate-200/50">
                     <div className="flex items-center gap-4 mb-10">
-                        <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-400">
+                        <div className="p-4 bg-emerald-50 rounded-2xl text-emerald-600 shadow-inner">
                             <Lock className="w-8 h-8" />
                         </div>
                         <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Seguridad</h3>
-                            <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">Actualiza la clave de acceso de la guardia</p>
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Seguridad</h3>
+                            <p className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">Actualiza la clave de acceso de la guardia</p>
                         </div>
                     </div>
 
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Nueva Contraseña</label>
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Nueva Contraseña</label>
                             <input 
                                 type="password" 
                                 placeholder="••••••••" 
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                className="w-full bg-slate-950 border border-white/5 rounded-2xl p-5 text-sm font-black tracking-widest focus:border-emerald-500/50 focus:outline-none transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black tracking-widest text-slate-900 focus:border-emerald-500/50 focus:outline-none transition-all shadow-inner"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Confirmar Nueva Contraseña</label>
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Confirmar Nueva Contraseña</label>
                             <input 
                                 type="password" 
                                 placeholder="••••••••" 
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full bg-slate-950 border border-white/5 rounded-2xl p-5 text-sm font-black tracking-widest focus:border-emerald-500/50 focus:outline-none transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black tracking-widest text-slate-900 focus:border-emerald-500/50 focus:outline-none transition-all shadow-inner"
                             />
                         </div>
 
                         <button 
                             onClick={handleUpdateGuardPassword}
                             disabled={isUpdatingPassword}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-emerald-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-4"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-4"
                         >
-                            {isUpdatingPassword ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> Guardar Clave</>}
+                            {isUpdatingPassword ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5 text-white" /> Guardar Clave</>}
                         </button>
                     </div>
                 </div>
 
-                <div className="bg-slate-900 border border-white/5 p-10 rounded-[3rem] shadow-2xl">
+                <div className="bg-white border border-slate-200 p-10 rounded-[3rem] shadow-xl shadow-slate-200/50">
                     <div className="flex items-center gap-4 mb-10">
-                        <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-400">
+                        <div className="p-4 bg-emerald-50 rounded-2xl text-emerald-600 shadow-inner">
                             <Users className="w-8 h-8" />
                         </div>
                         <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Usuario</h3>
-                            <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">Actualiza el usuario de acceso de la guardia</p>
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Usuario</h3>
+                            <p className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">Actualiza el usuario de acceso de la guardia</p>
                         </div>
                     </div>
 
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Nuevo Usuario</label>
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Nuevo Usuario</label>
                             <input 
                                 type="text" 
                                 placeholder="GUARDIA PRINCIPAL" 
                                 value={newGuardUsername}
                                 onChange={(e) => setNewGuardUsername(e.target.value.toUpperCase())}
-                                className="w-full bg-slate-950 border border-white/5 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 focus:outline-none transition-all text-white"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 focus:outline-none transition-all shadow-inner"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Confirmar Nuevo Usuario</label>
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Confirmar Nuevo Usuario</label>
                             <input 
                                 type="text" 
                                 placeholder="GUARDIA PRINCIPAL" 
                                 value={confirmGuardUsername}
                                 onChange={(e) => setConfirmGuardUsername(e.target.value.toUpperCase())}
-                                className="w-full bg-slate-950 border border-white/5 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 focus:outline-none transition-all text-white"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 focus:outline-none transition-all shadow-inner"
                             />
                         </div>
 
                         <button 
                             onClick={handleUpdateGuardName}
                             disabled={isUpdatingName}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-emerald-600/20 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-4"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-4"
                         >
-                            {isUpdatingName ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> Guardar Usuario</>}
+                            {isUpdatingName ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5 text-white" /> Guardar Usuario</>}
                         </button>
                     </div>
                 </div>
@@ -2009,25 +1834,25 @@ export default function GuardiaPortal() {
         {activeTab === 'identidades' && (
             <div className="space-y-8">
                 <div className="flex items-center justify-between mb-2 px-4">
-                  <h2 className="text-white font-black uppercase tracking-widest text-xs">Identidades</h2>
-                  <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Build v6.5</span>
+                  <h2 className="text-slate-900 font-extrabold uppercase tracking-widest text-xs">Identidades</h2>
+                  <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 shadow-sm">Build v6.5</span>
                 </div>
-                <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] overflow-hidden">
+                <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl shadow-slate-200/50">
 
-                    <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="p-8 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <UserCheck className="w-6 h-6 text-emerald-500" />
-                            <h3 className="font-black uppercase tracking-widest text-white text-sm">Banco de Identidades ({approvedVisitors.length})</h3>
+                            <UserCheck className="w-6 h-6 text-emerald-600" />
+                            <h3 className="font-black uppercase tracking-widest text-slate-900 text-sm">Banco de Identidades ({approvedVisitors.length})</h3>
                         </div>
                         
                         <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input 
                                 type="text"
                                 placeholder="BUSCAR POR NOMBRE O DNI..."
                                 value={identidadesSearch}
                                 onChange={(e) => setIdentidadesSearch(e.target.value)}
-                                className="w-full bg-slate-900 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
                             />
                         </div>
                     </div>
@@ -2035,9 +1860,9 @@ export default function GuardiaPortal() {
                     <div className="p-6">
                         <button 
                             onClick={() => setIsAddingVisitor(true)}
-                            className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 mb-6"
+                            className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/10 hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 mb-6 active:scale-95"
                         >
-                            <UserPlus className="w-4 h-4" />
+                            <UserPlus className="w-5 h-5" />
                             Nuevo Visitante Permanente
                         </button>
 
@@ -2050,17 +1875,17 @@ export default function GuardiaPortal() {
                                     v.full_name?.toLowerCase().includes(identidadesSearch.toLowerCase()) || 
                                     v.dni?.includes(identidadesSearch)
                                 ).map(v => (
-                                    <div key={v.dni} className="bg-slate-900/50 border border-white/5 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 group hover:border-emerald-500/20 transition-all">
+                                    <div key={v.dni} className="bg-white border border-slate-100 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 group hover:border-emerald-500/20 transition-all shadow-sm">
                                         <div className="flex items-center gap-4">
                                             <div className="min-w-0">
-                                                <h4 className="font-black uppercase text-xs text-white tracking-tight group-hover:text-emerald-400 transition-colors truncate">{v.full_name}</h4>
+                                                <h4 className="font-black uppercase text-xs text-slate-900 tracking-tight group-hover:text-emerald-700 transition-colors truncate">{v.full_name}</h4>
                                                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">DNI {v.dni}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button 
                                                 onClick={() => setManualEntryVisitor(v)}
-                                                className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white px-3 py-2 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/10"
+                                                className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                                             >
                                                 INGRESAR
                                             </button>
@@ -2069,23 +1894,23 @@ export default function GuardiaPortal() {
                                                     setViewingAuth(v);
                                                     fetchVisitorHistory(v.dni);
                                                 }}
-                                                className="bg-white/5 hover:bg-white/10 text-white px-3 py-2 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all"
+                                                className="bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-sm"
                                             >
                                                 Audit
                                             </button>
                                             <button 
                                                 onClick={() => handleDeleteVisitor(v.dni)}
-                                                className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white p-2 rounded-xl transition-all"
+                                                className="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white p-3 rounded-xl transition-all border border-red-100"
                                             >
-                                                <Trash2 className="w-3 h-3" />
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="py-20 bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
-                                    <Users className="w-12 h-12 text-slate-800 mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay identidades que coincidan</p>
+                                <div className="py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
+                                    <Users className="w-12 h-12 text-slate-300 mb-4" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay identidades que coincidan</p>
                                 </div>
                             )}
                         </div>
@@ -2097,25 +1922,25 @@ export default function GuardiaPortal() {
         {activeTab === 'trabajadores' && (
             <div className="space-y-8">
                 <div className="flex items-center justify-between mb-2 px-4">
-                  <h2 className="text-white font-black uppercase tracking-widest text-xs">Trabajadores</h2>
-                  <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Build v6.5</span>
+                  <h2 className="text-slate-900 font-extrabold uppercase tracking-widest text-xs">Trabajadores</h2>
+                  <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 shadow-sm">Build v6.5</span>
                 </div>
-                <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] overflow-hidden">
+                <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl shadow-slate-200/50">
 
-                    <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="p-8 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <Briefcase className="w-6 h-6 text-emerald-500" />
-                            <h3 className="font-black uppercase tracking-widest text-white text-sm">Personal Permanente ({trabajadores.length})</h3>
+                            <Briefcase className="w-6 h-6 text-emerald-600" />
+                            <h3 className="font-black uppercase tracking-widest text-slate-900 text-sm">Personal Permanente ({trabajadores.length})</h3>
                         </div>
                         
                         <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input 
                                 type="text"
                                 placeholder="BUSCAR TRABAJADOR..."
                                 value={trabajadoresSearch}
                                 onChange={(e) => setTrabajadoresSearch(e.target.value)}
-                                className="w-full bg-slate-900 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
                             />
                         </div>
                     </div>
@@ -2123,9 +1948,9 @@ export default function GuardiaPortal() {
                     <div className="p-6">
                         <button 
                             onClick={() => setIsAddingTrabajador(true)}
-                            className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 mb-6"
+                            className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/10 hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 mb-6 active:scale-95"
                         >
-                            <UserPlus className="w-4 h-4" />
+                            <UserPlus className="w-5 h-5" />
                             Agregar Nuevo Trabajador
                         </button>
 
@@ -2138,15 +1963,15 @@ export default function GuardiaPortal() {
                                     v.full_name?.toLowerCase().includes(trabajadoresSearch.toLowerCase()) || 
                                     v.dni?.includes(trabajadoresSearch)
                                 ).map(v => (
-                                    <div key={v.dni} className={`p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 group transition-all border ${v.status === 'blocked' ? 'bg-red-500/5 border-red-500/20' : 'bg-slate-900/50 border-white/5 hover:border-emerald-500/20'}`}>
+                                    <div key={v.dni} className={`p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 group transition-all border ${v.status === 'blocked' ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100 shadow-sm hover:border-emerald-500/30 hover:shadow-lg'}`}>
                                         <div className="flex items-center gap-4">
                                             <div className="min-w-0">
-                                                <h4 className={`font-black uppercase text-xs tracking-tight transition-colors truncate ${v.status === 'blocked' ? 'text-red-400' : 'text-white group-hover:text-emerald-400'}`}>{v.full_name}</h4>
-                                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest leading-none mt-1">
+                                                <h4 className={`font-black uppercase text-xs tracking-tight transition-colors truncate ${v.status === 'blocked' ? 'text-red-600 font-extrabold' : 'text-slate-900 group-hover:text-emerald-700'}`}>{v.full_name}</h4>
+                                                <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-widest leading-none mt-1">
                                                     DNI {v.dni} • {v.category || 'SIN CATEGORÍA'} {v.employer ? `• AUTORIZADO POR: ${v.employer}` : ''}
                                                 </p>
                                                 {(v.start_date || v.end_date) && (
-                                                  <p className="text-[8px] text-emerald-500/70 font-black uppercase tracking-widest mt-1">
+                                                  <p className="text-[8px] text-emerald-600 font-black uppercase tracking-widest mt-1">
                                                     VIGENCIA: {v.start_date ? new Date(v.start_date).toLocaleDateString() : '---'} AL {v.end_date ? new Date(v.end_date).toLocaleDateString() : '---'}
                                                   </p>
                                                 )}
@@ -2156,30 +1981,30 @@ export default function GuardiaPortal() {
                                             {v.status !== 'blocked' && (
                                                 <button 
                                                     onClick={() => setManualEntryVisitor({ ...v, role: 'worker' })}
-                                                    className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white px-3 py-2 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/10"
+                                                    className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                                                 >
                                                     INGRESAR
                                                 </button>
                                             )}
                                             <button 
                                                 onClick={() => toggleBlockTrabajador(v.id, v.status)}
-                                                className={`px-3 py-2 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all ${v.status === 'blocked' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}
+                                                className={`px-4 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-sm ${v.status === 'blocked' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}
                                             >
                                                 {v.status === 'blocked' ? 'Habilitar' : 'Bloquear'}
                                             </button>
                                             <button 
                                                 onClick={() => handleDeleteTrabajador(v.id)}
-                                                className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white p-2 rounded-xl transition-all"
+                                                className="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white p-3 rounded-xl transition-all border border-red-100"
                                             >
-                                                <Trash2 className="w-3 h-3" />
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="py-20 bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
-                                    <Briefcase className="w-12 h-12 text-slate-800 mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay trabajadores en esa búsqueda</p>
+                                <div className="py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
+                                    <Briefcase className="w-12 h-12 text-slate-300 mb-4" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay trabajadores en esa búsqueda</p>
                                 </div>
                             )}
                         </div>
@@ -2191,25 +2016,25 @@ export default function GuardiaPortal() {
         {activeTab === 'permanentes' && (
             <div className="space-y-8">
                 <div className="flex items-center justify-between mb-2 px-4">
-                  <h2 className="text-white font-black uppercase tracking-widest text-xs">Permanentes</h2>
-                  <span className="text-[9px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Build v6.5</span>
+                  <h2 className="text-slate-900 font-extrabold uppercase tracking-widest text-xs">Permanentes</h2>
+                  <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 shadow-sm">Build v6.5</span>
                 </div>
-                <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] overflow-hidden">
+                <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl shadow-slate-200/50">
 
-                    <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="p-8 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <ShieldCheck className="w-6 h-6 text-emerald-500" />
-                            <h3 className="font-black uppercase tracking-widest text-white text-sm">Accesos Fijos ({permanentes.length})</h3>
+                            <ShieldCheck className="w-6 h-6 text-emerald-600" />
+                            <h3 className="font-black uppercase tracking-widest text-slate-900 text-sm">Accesos Fijos ({permanentes.length})</h3>
                         </div>
                         
                         <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input 
                                 type="text"
                                 placeholder="BUSCAR PERMANENTE..."
                                 value={permanentesSearch}
                                 onChange={(e) => setPermanentesSearch(e.target.value)}
-                                className="w-full bg-slate-900 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
                             />
                         </div>
                     </div>
@@ -2217,9 +2042,9 @@ export default function GuardiaPortal() {
                     <div className="p-6">
                         <button 
                             onClick={() => setIsAddingPermanente(true)}
-                            className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 mb-6"
+                            className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/10 hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 mb-6 active:scale-95"
                         >
-                            <UserPlus className="w-4 h-4" />
+                            <UserPlus className="w-5 h-5" />
                             Agregar Nuevo Permanente
                         </button>
 
@@ -2232,15 +2057,15 @@ export default function GuardiaPortal() {
                                     v.full_name?.toLowerCase().includes(permanentesSearch.toLowerCase()) || 
                                     v.dni?.includes(permanentesSearch)
                                 ).map(v => (
-                                    <div key={v.dni} className={`p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 group transition-all border ${v.status === 'blocked' ? 'bg-red-500/5 border-red-500/20' : 'bg-slate-900/50 border-white/5 hover:border-emerald-500/20'}`}>
+                                    <div key={v.dni} className={`p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 group transition-all border ${v.status === 'blocked' ? 'bg-red-50 border-red-200 shadow-inner' : 'bg-white border-slate-100 shadow-sm hover:border-emerald-500/30 hover:shadow-lg'}`}>
                                         <div className="flex items-center gap-4">
                                             <div className="min-w-0">
-                                                <h4 className={`font-black uppercase text-xs tracking-tight transition-colors truncate ${v.status === 'blocked' ? 'text-red-400' : 'text-white group-hover:text-emerald-400'}`}>{v.full_name}</h4>
-                                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest leading-none mt-1">
-                                                    DNI {v.dni} • {v.category || 'SIN CATEGORÍA'} {v.employer ? `• AUTORIZADO POR: ${v.employer}` : ''}
+                                                <h4 className={`font-black uppercase text-xs tracking-tighter transition-colors truncate ${v.status === 'blocked' ? 'text-red-600 font-extrabold' : 'text-slate-900 group-hover:text-emerald-700'}`}>{v.full_name}</h4>
+                                                <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest leading-none mt-1">
+                                                    DNI {v.dni} • {v.category || 'PERMANENTE'} {v.employer ? `• AUTORIZADO POR: ${v.employer}` : ''}
                                                 </p>
                                                 {(v.start_date || v.end_date) && (
-                                                  <p className="text-[8px] text-emerald-500/70 font-black uppercase tracking-widest mt-1">
+                                                  <p className="text-[8px] text-emerald-600 font-black uppercase tracking-widest mt-1">
                                                     VIGENCIA: {v.start_date ? new Date(v.start_date).toLocaleDateString() : '---'} AL {v.end_date ? new Date(v.end_date).toLocaleDateString() : '---'}
                                                   </p>
                                                 )}
@@ -2250,30 +2075,30 @@ export default function GuardiaPortal() {
                                             {v.status !== 'blocked' && (
                                                 <button 
                                                     onClick={() => setManualEntryVisitor({ ...v, role: 'worker' })}
-                                                    className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-white px-3 py-2 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/10"
+                                                    className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                                                 >
                                                     INGRESAR
                                                 </button>
                                             )}
                                             <button 
                                                 onClick={() => toggleBlockPermanente(v.id, v.status)}
-                                                className={`px-3 py-2 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all ${v.status === 'blocked' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}
+                                                className={`px-4 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-sm ${v.status === 'blocked' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}
                                             >
                                                 {v.status === 'blocked' ? 'Habilitar' : 'Bloquear'}
                                             </button>
                                             <button 
                                                 onClick={() => handleDeletePermanente(v.id)}
-                                                className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white p-2 rounded-xl transition-all"
+                                                className="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white p-3 rounded-xl transition-all border border-red-100"
                                             >
-                                                <Trash2 className="w-3 h-3" />
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="py-20 bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
-                                    <ShieldCheck className="w-12 h-12 text-slate-800 mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay permanentes en esa búsqueda</p>
+                                <div className="py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
+                                    <ShieldCheck className="w-12 h-12 text-slate-300 mb-4" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay permanentes en esa búsqueda</p>
                                 </div>
                             )}
                         </div>
@@ -2283,27 +2108,27 @@ export default function GuardiaPortal() {
         )}
 
         {activeTab === 'propietarios' && (
-            <div className="space-y-8">
-                <div className="bg-slate-900 border border-white/5 rounded-[2.5rem] overflow-hidden">
-                    <div className="p-8 border-b border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl shadow-slate-200/50">
+                    <div className="p-8 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <Building2 className="w-6 h-6 text-emerald-500" />
-                            <h3 className="font-black uppercase tracking-widest text-white text-sm">Vecinos Activos ({allOwners.length})</h3>
+                            <Building2 className="w-6 h-6 text-emerald-600" />
+                            <h3 className="font-black uppercase tracking-widest text-slate-900 text-sm">Vecinos Activos ({allOwners.length})</h3>
                         </div>
                         
                         <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input 
                                 type="text"
                                 placeholder="BUSCAR POR NOMBRE O LOTE..."
                                 value={ownerSearch}
                                 onChange={(e) => setOwnerSearch(e.target.value.toUpperCase())}
-                                className="w-full bg-slate-900 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
                             />
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 divide-y divide-white/5">
+                    <div className="grid grid-cols-1 divide-y divide-slate-100">
                         {allOwners.filter(owner => 
                             owner.full_name?.toLowerCase().includes(ownerSearch.toLowerCase()) || 
                             owner.lote?.toString().includes(ownerSearch)
@@ -2312,22 +2137,22 @@ export default function GuardiaPortal() {
                                 owner.full_name?.toLowerCase().includes(ownerSearch.toLowerCase()) || 
                                 owner.lote?.toString().includes(ownerSearch)
                             ).map((owner) => (
-                                <div key={owner.id} className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:bg-white/5 transition-colors">
+                                <div key={owner.id} className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:bg-slate-50 transition-colors">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-slate-800 rounded-2xl flex items-center justify-center font-black text-emerald-500">{owner.lote}</div>
+                                        <div className="w-12 h-12 bg-slate-100 border border-slate-200 rounded-2xl flex items-center justify-center font-black text-emerald-600 shadow-sm">{owner.lote}</div>
                                         <div>
-                                            <h4 className="font-black uppercase text-white group-hover:text-emerald-400 transition-colors">{owner.full_name}</h4>
-                                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{owner.email || 'SIN EMAIL'}</p>
+                                            <h4 className="font-extrabold uppercase text-slate-900 group-hover:text-emerald-700 transition-colors">{owner.full_name}</h4>
+                                            <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">{owner.email || 'SIN EMAIL'}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${owner.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>{owner.status}</span>
-                                        <button onClick={() => handleBlockOwner(owner.id, owner.status)} className="p-3 bg-white/5 hover:bg-slate-800 rounded-xl transition-all"><Lock className="w-4 h-4 text-slate-500" /></button>
+                                        <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${owner.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>{owner.status === 'active' ? 'ACTIVO' : 'BLOQUEADO'}</span>
+                                        <button onClick={() => handleBlockOwner(owner.id, owner.status)} className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all text-slate-400 hover:text-slate-600"><Lock className="w-4 h-4" /></button>
                                     </div>
                                 </div>
                             ))
                         ) : (
-                            <div className="p-20 text-center text-[10px] font-black uppercase text-slate-700 italic tracking-[0.3em]">
+                            <div className="p-20 text-center text-[10px] font-black uppercase text-slate-400 italic tracking-[0.3em]">
                                 No se encontraron vecinos con esa búsqueda
                             </div>
                         )}
@@ -2337,16 +2162,16 @@ export default function GuardiaPortal() {
         )}
 
         {activeTab === 'historial' && (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 ml-4">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-3">
-                            <History className="w-5 h-5 text-emerald-500" />
-                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Historial de Auditoría (90 días)</h3>
+                            <History className="w-5 h-5 text-emerald-600" />
+                            <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-400">Historial de Auditoría (90 días)</h3>
                         </div>
                         <button 
                             onClick={handleClearHistory}
-                            className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 border border-red-500/20"
+                            className="bg-red-50 hover:bg-red-600 text-red-600 hover:text-white px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 border border-red-100 shadow-sm"
                         >
                             <Trash2 className="w-3 h-3" />
                             Limpiar Historial Finalizado
@@ -2354,31 +2179,31 @@ export default function GuardiaPortal() {
                     </div>
                     
                     <div className="relative w-full sm:w-80">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input 
                             type="text"
                             placeholder="BUSCAR POR NOMBRE, DNI O LOTE..."
                             value={historySearch}
                             onChange={(e) => setHistorySearch(e.target.value.toUpperCase())}
-                            className="w-full bg-slate-900 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-emerald-500/50 transition-all"
+                            className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
                         />
                     </div>
                 </div>
 
-                <div className="bg-slate-900 rounded-3xl border border-white/5 overflow-hidden">
+                <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-xl shadow-slate-200/50">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
-                                <tr className="bg-white/5">
-                                    <th className="p-4 text-[9px] font-black uppercase text-slate-500 tracking-widest">Visitante</th>
-                                    <th className="p-4 text-[9px] font-black uppercase text-slate-500 tracking-widest">Documento</th>
-                                    <th className="p-4 text-[9px] font-black uppercase text-slate-500 tracking-widest">Lote</th>
-                                    <th className="p-4 text-[9px] font-black uppercase text-slate-500 tracking-widest">Fecha</th>
-                                    <th className="p-4 text-[9px] font-black uppercase text-slate-500 tracking-widest">Entrada</th>
-                                    <th className="p-4 text-[9px] font-black uppercase text-slate-500 tracking-widest">Salida</th>
+                                <tr className="bg-slate-50 border-b border-slate-100">
+                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Visitante</th>
+                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Documento</th>
+                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Lote</th>
+                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Fecha</th>
+                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Entrada</th>
+                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Salida</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/5">
+                            <tbody className="divide-y divide-slate-100">
                                 {historyRecords.filter(r => 
                                     r.full_name?.toLowerCase().includes(historySearch.toLowerCase()) || 
                                     r.dni?.includes(historySearch) ||
@@ -2388,32 +2213,32 @@ export default function GuardiaPortal() {
                                     r.dni?.includes(historySearch) ||
                                     r.invitations?.profiles?.lote?.toString().includes(historySearch)
                                 ).map(r => (
-                                    <tr key={r.id} className="hover:bg-white/5 transition-colors group">
-                                        <td className="p-4 font-bold uppercase text-xs text-white">
+                                    <tr key={r.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <td className="p-5 font-extrabold uppercase text-xs text-slate-900">
                                             <div className="flex items-center gap-3">
                                                 {r.full_name}
                                                 <button 
                                                     onClick={() => handleDeleteHistoryRecord(r.id, r.dni)}
-                                                    className="opacity-0 group-hover:opacity-100 p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all"
+                                                    className="opacity-0 group-hover:opacity-100 p-1.5 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all border border-red-100"
                                                     title="Eliminar Registro"
                                                 >
                                                     <Trash2 className="w-3 h-3" />
                                                 </button>
                                             </div>
                                         </td>
-                                        <td className="p-4 font-black text-[10px] text-slate-400">DNI {r.dni}</td>
-                                        <td className="p-4 font-black text-[10px] text-emerald-400">LOTE {r.invitations?.profiles?.lote || '--'}</td>
-                                        <td className="p-4 text-[10px] text-slate-300 font-black">{r.updated_at ? new Date(r.updated_at).toLocaleDateString('es-AR') : '--'}</td>
-                                        <td className="p-4 text-[10px] text-emerald-400/80 font-black">
+                                        <td className="p-5 font-extrabold text-[10px] text-slate-500">DNI {r.dni}</td>
+                                        <td className="p-5 font-black text-[10px] text-emerald-600">LOTE {r.invitations?.profiles?.lote || '--'}</td>
+                                        <td className="p-5 text-[10px] text-slate-500 font-extrabold">{r.updated_at ? new Date(r.updated_at).toLocaleDateString('es-AR') : '--'}</td>
+                                        <td className="p-5 text-[10px] text-emerald-600 font-black">
                                             {r.entry_at ? new Date(r.entry_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
                                         </td>
-                                        <td className="p-4 text-[10px] text-red-400/80 font-black">
+                                        <td className="p-5 text-[10px] text-red-500 font-black">
                                             {r.exit_at ? new Date(r.exit_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
                                         </td>
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan={6} className="p-20 text-center text-[10px] font-black uppercase text-slate-700 italic tracking-[0.3em]">
+                                        <td colSpan={6} className="p-20 text-center text-[10px] font-black uppercase text-slate-300 italic tracking-[0.3em]">
                                             No hay registros que coincidan con la búsqueda
                                         </td>
                                     </tr>
@@ -2426,14 +2251,14 @@ export default function GuardiaPortal() {
         )}
 
         {viewingAuth && (
-            <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300 overflow-y-auto">
-                <div className="bg-slate-900 w-full max-w-4xl border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden my-8">
-                    <div className="p-8 border-b border-white/5 flex items-center justify-between">
+            <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300 overflow-y-auto">
+                <div className="bg-white w-full max-w-4xl border border-slate-200 rounded-[3rem] shadow-2xl overflow-hidden my-8">
+                    <div className="p-8 border-b border-slate-100 flex items-center justify-between">
                         <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white">{viewingAuth.full_name}</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Auditoría de Identidad • DNI {viewingAuth.dni}</p>
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">{viewingAuth.full_name}</h3>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Auditoría de Identidad • DNI {viewingAuth.dni}</p>
                         </div>
-                        <button onClick={() => { setViewingAuth(null); setVisitorHistory([]); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+                        <button onClick={() => { setViewingAuth(null); setVisitorHistory([]); }} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X className="w-6 h-6" /></button>
                     </div>
                     
                     <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
@@ -2441,11 +2266,11 @@ export default function GuardiaPortal() {
                             {/* DNI FRENTE */}
                             {viewingAuth.dni_front_url && (
                             <div>
-                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">DNI Frente</p>
-                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">DNI Frente</p>
+                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border border-slate-200 group bg-slate-50 flex items-center justify-center shadow-inner">
                                     <img src={viewingAuth.dni_front_url} className="w-full h-full object-cover" alt="DNI Frente" />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.dni_front_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    <div className="absolute inset-0 bg-slate-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.dni_front_url)} className="p-3 bg-emerald-600 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-5 h-5" /></button>
                                     </div>
                                 </div>
                             </div>
@@ -2454,11 +2279,11 @@ export default function GuardiaPortal() {
                             {/* DNI DORSO */}
                             {viewingAuth.dni_back_url && (
                             <div>
-                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">DNI Dorso</p>
-                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">DNI Dorso</p>
+                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border border-slate-200 group bg-slate-50 flex items-center justify-center shadow-inner">
                                     <img src={viewingAuth.dni_back_url} className="w-full h-full object-cover" alt="DNI Dorso" />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.dni_back_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    <div className="absolute inset-0 bg-slate-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.dni_back_url)} className="p-3 bg-emerald-600 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-5 h-5" /></button>
                                     </div>
                                 </div>
                             </div>
@@ -2467,11 +2292,11 @@ export default function GuardiaPortal() {
                             {/* SELFIE */}
                             {viewingAuth.selfie_url && (
                             <div>
-                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Selfie</p>
-                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">Selfie</p>
+                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border border-slate-200 group bg-slate-50 flex items-center justify-center shadow-inner">
                                     <img src={viewingAuth.selfie_url} className="w-full h-full object-cover" alt="Selfie" />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.selfie_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.selfie_url)} className="p-3 bg-emerald-600 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-5 h-5" /></button>
                                     </div>
                                 </div>
                             </div>
@@ -2480,11 +2305,11 @@ export default function GuardiaPortal() {
                             {/* SEGURO FRENTE */}
                             {viewingAuth.vehicle_insurance_url && (
                             <div>
-                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Seguro Frente</p>
-                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">Seguro Frente</p>
+                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border border-slate-200 group bg-slate-50 flex items-center justify-center shadow-inner">
                                     <img src={viewingAuth.vehicle_insurance_url} className="w-full h-full object-cover" alt="Seguro Frente" />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    <div className="absolute inset-0 bg-slate-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_url)} className="p-3 bg-emerald-600 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-5 h-5" /></button>
                                     </div>
                                 </div>
                             </div>
@@ -2493,11 +2318,11 @@ export default function GuardiaPortal() {
                             {/* SEGURO DORSO */}
                             {viewingAuth.vehicle_insurance_back_url && (
                             <div>
-                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Seguro Dorso</p>
-                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">Seguro Dorso</p>
+                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border border-slate-200 group bg-slate-50 flex items-center justify-center shadow-inner">
                                     <img src={viewingAuth.vehicle_insurance_back_url} className="w-full h-full object-cover" alt="Seguro Dorso" />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_back_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    <div className="absolute inset-0 bg-slate-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.vehicle_insurance_back_url)} className="p-3 bg-emerald-600 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-5 h-5" /></button>
                                     </div>
                                 </div>
                             </div>
@@ -2506,11 +2331,11 @@ export default function GuardiaPortal() {
                             {/* ART */}
                             {viewingAuth.work_insurance_url && (
                             <div>
-                                <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Seguro ART</p>
-                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border-2 border-white/5 group bg-slate-950 flex items-center justify-center">
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">Seguro ART</p>
+                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border border-slate-200 group bg-slate-50 flex items-center justify-center shadow-inner">
                                     <img src={viewingAuth.work_insurance_url} className="w-full h-full object-cover" alt="ART" />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.work_insurance_url)} className="p-3 bg-emerald-500 rounded-full text-white shadow-lg"><Maximize2 className="w-5 h-5" /></button>
+                                    <div className="absolute inset-0 bg-slate-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => setZoomedImg(viewingAuth.work_insurance_url)} className="p-3 bg-emerald-600 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-5 h-5" /></button>
                                     </div>
                                 </div>
                             </div>
@@ -2518,30 +2343,30 @@ export default function GuardiaPortal() {
                         </div>
 
                         {viewingAuth.vehicle_patente && (
-                            <div className="md:col-span-2 bg-slate-950/50 border border-white/10 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8">
+                            <div className="md:col-span-2 bg-slate-50 border border-slate-200 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8 shadow-inner">
                                 <div className="flex items-center gap-6">
-                                    <div className="p-5 bg-emerald-500/10 rounded-2xl text-emerald-500">
+                                    <div className="p-5 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-500/20">
                                         <Car className="w-10 h-10" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">Información del Vehículo</p>
-                                        <h4 className="text-2xl font-black uppercase text-white tracking-tighter leading-none">{viewingAuth.vehicle_modelo || '---'}</h4>
-                                        <p className="text-sm font-black text-emerald-500 tracking-[0.2em] mt-2">{viewingAuth.vehicle_patente} • Año {viewingAuth.vehicle_anio || '--'}</p>
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Información del Vehículo</p>
+                                        <h4 className="text-2xl font-black uppercase text-slate-900 tracking-tighter leading-none">{viewingAuth.vehicle_modelo || '---'}</h4>
+                                        <p className="text-sm font-black text-emerald-600 tracking-[0.2em] mt-2">{viewingAuth.vehicle_patente} • Año {viewingAuth.vehicle_anio || '--'}</p>
                                     </div>
                                 </div>
                                 
                                 <div className="flex flex-col items-center gap-3">
-                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Validación de Seguro (Guardia)</p>
-                                    <div className="flex p-1.5 bg-black/40 rounded-2xl border border-white/5 gap-2">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Validación de Seguro (Guardia)</p>
+                                    <div className="flex p-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm gap-2">
                                         {[
-                                            {id: 'VIGENTE', color: 'bg-emerald-500', label: 'PAGO / VIGENTE'},
-                                            {id: 'IMPAGO', color: 'bg-amber-500', label: 'IMPAGO'},
-                                            {id: 'VENCIDO', color: 'bg-red-500', label: 'VENCIDO'}
+                                            {id: 'VIGENTE', color: 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20', label: 'VIGENTE'},
+                                            {id: 'IMPAGO', color: 'bg-amber-500 text-white shadow-lg shadow-amber-500/20', label: 'IMPAGO'},
+                                            {id: 'VENCIDO', color: 'bg-red-600 text-white shadow-lg shadow-red-500/20', label: 'VENCIDO'}
                                         ].map(s => (
                                             <button 
                                                 key={s.id}
                                                 onClick={() => updateInsuranceStatus(viewingAuth.id, s.id, !!viewingAuth.isMaster)}
-                                                className={`px-4 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${viewingAuth.insurance_status === s.id ? `${s.color} text-white shadow-lg` : 'hover:bg-white/5 text-slate-500'}`}
+                                                className={`px-4 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${viewingAuth.insurance_status === s.id ? s.color : 'hover:bg-slate-50 text-slate-400'}`}
                                             >
                                                 {s.label}
                                             </button>
@@ -2552,46 +2377,46 @@ export default function GuardiaPortal() {
                         )}
 
                         <div className="md:col-span-2">
-                             <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2">Historial Reciente</p>
+                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">Historial Reciente</p>
                              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                 {visitorHistory.length > 0 ? visitorHistory.map(h => (
-                                    <div key={h.id} className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-center justify-between">
+                                    <div key={h.id} className="bg-white border border-slate-100 p-4 rounded-2xl flex items-center justify-between shadow-sm">
                                         <div className="flex items-center gap-4">
-                                            <div className="p-2 bg-emerald-500/10 rounded-xl">
-                                                <Home className="w-3 h-3 text-emerald-500" />
+                                            <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-100 shadow-inner">
+                                                <Home className="w-3 h-3 text-emerald-600" />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-black uppercase text-white">Lote {h.invitations?.profiles?.lote}</p>
-                                                <p className="text-[8px] font-black text-slate-500">{new Date(h.updated_at).toLocaleDateString('es-AR')}</p>
+                                                <p className="text-[10px] font-black uppercase text-slate-900">Lote {h.invitations?.profiles?.lote}</p>
+                                                <p className="text-[8px] font-extrabold text-slate-400">{new Date(h.updated_at).toLocaleDateString('es-AR')}</p>
                                             </div>
                                         </div>
-                                        <p className="text-[9px] font-black uppercase text-emerald-500/70 tracking-widest bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10">
+                                        <p className="text-[9px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
                                             {h.status === 'completed' ? 'Salida' : 'Ingreso'} • {new Date(h.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs
                                         </p>
                                     </div>
                                 )) : (
-                                    <div className="py-10 bg-white/5 rounded-2xl text-center border border-dashed border-white/5">
-                                        <p className="text-[9px] font-black uppercase text-slate-600 italic">No hay ingresos previos registrados</p>
+                                    <div className="py-10 bg-slate-50 rounded-2xl text-center border-2 border-dashed border-slate-200 shadow-inner">
+                                        <p className="text-[9px] font-black uppercase text-slate-400 italic">No hay ingresos previos registrados</p>
                                     </div>
                                 )}
                              </div>
                         </div>
                     </div>
 
-                    <div className="p-8 bg-black/20 border-t border-white/5 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                    <div className="p-8 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row gap-4 items-center justify-between">
                         <div className="flex flex-col gap-2 w-full sm:w-auto">
                             {!viewingAuth.face_descriptor && (
                                 <button 
                                     disabled={isDetecting}
                                     onClick={handleAnalizarBiometria}
-                                    className="px-6 py-3 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white rounded-2xl border border-blue-500/20 font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2"
+                                    className="px-6 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-2xl border border-blue-200 font-extrabold text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm"
                                 >
                                     {isDetecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                                     Analizar Biometría
                                 </button>
                             )}
                             {viewingAuth.face_descriptor && (
-                                <div className="px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 font-black text-[9px] uppercase tracking-widest flex items-center gap-2">
+                                <div className="px-6 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 font-black text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-sm">
                                     <ShieldCheck className="w-4 h-4" />
                                     Identidad Digital Generada
                                 </div>
@@ -2603,14 +2428,14 @@ export default function GuardiaPortal() {
                           <>
                             <button 
                                 onClick={() => viewingAuth.isOwner ? handleAuthorizeOwner(viewingAuth.id) : handleApproveVisitor(viewingAuth.id)}
-                                className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-500 px-8 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-3"
+                                className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/10 transition-all active:scale-95 flex items-center justify-center gap-3"
                             >
                                 <CheckCircle className="w-5 h-5" />
                                 {viewingAuth.isOwner ? 'Activar Propietario' : 'Aprobar Identidad'}
                             </button>
                             <button 
                                 onClick={() => viewingAuth.isOwner ? handleBlockOwner(viewingAuth.id, 'pending') : handleRejectVisitor(viewingAuth.id)}
-                                className="flex-1 sm:flex-initial bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-8 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3"
+                                className="flex-1 sm:flex-initial bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-8 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 shadow-sm"
                             >
                                 <UserX className="w-5 h-5" />
                                 {viewingAuth.isOwner ? 'Rechazar' : 'Rechazar'}
@@ -2618,13 +2443,13 @@ export default function GuardiaPortal() {
                           </>
                         ) : (
                           <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-6">
-                             <div className="flex items-center gap-3 px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 font-black text-xs uppercase tracking-widest">
+                             <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 font-black text-xs uppercase tracking-widest shadow-sm">
                                 <ShieldCheck className="w-5 h-5" />
                                 Identidad Verificada
                              </div>
                              <button 
                                 onClick={() => setViewingAuth(null)}
-                                className="w-full sm:w-auto px-12 bg-slate-800 hover:bg-slate-700 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all active:scale-95"
+                                className="w-full sm:w-auto px-12 bg-white border border-slate-200 text-slate-900 hover:bg-slate-50 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95"
                              >
                                 Cerrar Ficha
                              </button>
@@ -2637,33 +2462,33 @@ export default function GuardiaPortal() {
         )}
 
         {manualEntryVisitor && (
-            <div className="fixed inset-0 z-[200] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
-                <div className="bg-slate-900 w-full max-w-md border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden p-10">
+            <div className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <div className="bg-white w-full max-w-md border border-slate-200 rounded-[3rem] shadow-2xl overflow-hidden p-10">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Ingreso Manual</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Asignar destino para {manualEntryVisitor.full_name}</p>
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Ingreso Manual</h3>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Asignar destino para {manualEntryVisitor.full_name}</p>
                         </div>
-                        <button onClick={() => setManualEntryVisitor(null)} className="p-2 bg-white/5 rounded-full"><X className="w-4 h-4" /></button>
+                        <button onClick={() => setManualEntryVisitor(null)} className="p-3 bg-slate-50 border border-slate-100 rounded-full hover:bg-slate-100 transition-all text-slate-400"><X className="w-4 h-4" /></button>
                     </div>
 
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest ml-4">Lote Destino</label>
+                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-4">Lote Destino</label>
                             <input 
                                 type="text"
                                 value={manualEntryLote}
                                 onChange={(e) => setManualEntryLote(e.target.value)}
                                 placeholder="EJ: 114"
-                                className="w-full bg-slate-950 border border-white/5 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-slate-900 shadow-inner"
                             />
                         </div>
                         <button 
                             onClick={handleConfirmManualEntry}
                             disabled={!manualEntryLote || loading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/10 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5 text-white" />}
                             Confirmar Ingreso
                         </button>
                     </div>
@@ -2672,43 +2497,43 @@ export default function GuardiaPortal() {
         )}
 
         {isAddingVisitor && (
-            <div className="fixed inset-0 z-[200] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
-                <div className="bg-slate-900 w-full max-w-md border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden p-10">
+            <div className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <div className="bg-white w-full max-w-md border border-slate-200 rounded-[3rem] shadow-2xl overflow-hidden p-10">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Nueva Identidad</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Registro Manual de Invitado</p>
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Nueva Identidad</h3>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Registro Manual de Invitado</p>
                         </div>
-                        <button onClick={() => setIsAddingVisitor(false)} className="p-2 bg-white/5 rounded-full"><X className="w-4 h-4" /></button>
+                        <button onClick={() => setIsAddingVisitor(false)} className="p-3 bg-slate-50 border border-slate-100 rounded-full hover:bg-slate-100 transition-all text-slate-400"><X className="w-4 h-4" /></button>
                     </div>
 
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest ml-4">Nombre Completo</label>
+                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-4">Nombre Completo</label>
                             <input 
                                 type="text"
                                 value={newVisitor.full_name}
                                 onChange={(e) => setNewVisitor({...newVisitor, full_name: e.target.value.toUpperCase()})}
                                 placeholder="JUAN PEREZ"
-                                className="w-full bg-slate-950 border border-white/5 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-slate-900 shadow-inner"
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest ml-4">DNI / Documento</label>
+                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-4">DNI / Documento</label>
                             <input 
                                 type="text"
                                 value={newVisitor.dni}
                                 onChange={(e) => setNewVisitor({...newVisitor, dni: e.target.value})}
                                 placeholder="12345678"
-                                className="w-full bg-slate-950 border border-white/5 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-slate-900 shadow-inner"
                             />
                         </div>
                         <button 
                             onClick={handleSaveManualVisitor}
                             disabled={!newVisitor.dni || !newVisitor.full_name || loading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/10 transition-all active:scale-95 flex items-center justify-center gap-3"
                         >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5" />}
                             Guardar Identidad
                         </button>
                     </div>
@@ -2717,69 +2542,69 @@ export default function GuardiaPortal() {
         )}
       </div>
         {isAddingTrabajador && (
-            <div className="fixed inset-0 z-[200] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
-                <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-[3.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
-                    <div className="p-10 border-b border-white/5 bg-gradient-to-br from-emerald-500/10 to-transparent">
+            <div className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <div className="bg-white border border-slate-200 w-full max-w-lg rounded-[3.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.1)] overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
+                    <div className="p-10 border-b border-slate-100 bg-emerald-50/50">
                         <div className="flex items-center justify-between mb-2">
-                             <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-400">
+                             <div className="p-3 bg-white rounded-2xl text-emerald-600 border border-emerald-100 shadow-sm">
                                 <UserPlus className="w-6 h-6" />
                              </div>
-                             <button onClick={() => setIsAddingTrabajador(false)} className="p-2 hover:bg-white/5 rounded-full text-slate-500 transition-all"><X className="w-6 h-6" /></button>
+                             <button onClick={() => setIsAddingTrabajador(false)} className="p-3 bg-white border border-slate-100 rounded-full text-slate-400 hover:bg-slate-50 transition-all"><X className="w-6 h-6" /></button>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Nuevo Trabajador</h3>
-                        <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">Registra personal permanente para el barrio</p>
+                        <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Nuevo Trabajador</h3>
+                        <p className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">Registra personal permanente para el barrio</p>
                     </div>
                     
                     <div className="p-10 space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Nombre Completo</label>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Nombre Completo</label>
                                 <input 
                                     type="text" 
                                     placeholder="EJ: JUAN PEREZ"
                                     value={newTrabajador.full_name}
-                                    onChange={(e) => setNewTrabajador({...newTrabajador, full_name: e.target.value})}
-                                    className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                    onChange={(e) => setNewTrabajador({...newTrabajador, full_name: e.target.value.toUpperCase()})}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">DNI</label>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">DNI</label>
                                 <input 
                                     type="text" 
                                     placeholder="SÓLO NÚMEROS"
                                     value={newTrabajador.dni}
                                     onChange={(e) => setNewTrabajador({...newTrabajador, dni: e.target.value})}
-                                    className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
                                 />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Categoría</label>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Categoría</label>
                                 <input 
                                     type="text" 
                                     placeholder="EJ: JARDINERO"
                                     value={newTrabajador.category}
                                     onChange={(e) => setNewTrabajador({...newTrabajador, category: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Empleador / Lote</label>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Empleador / Lote</label>
                                 <input 
                                     type="text" 
                                     placeholder="EJ: LOTE 120"
                                     value={newTrabajador.employer}
                                     onChange={(e) => setNewTrabajador({...newTrabajador, employer: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
                                 />
                             </div>
                         </div>
 
                         {/* DOCUMENTACIÓN TRABAJADOR */}
-                        <div className="space-y-4 pt-4 border-t border-white/5">
-                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2">Documentación Obligatoria</p>
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Documentación Obligatoria</p>
                             <div className="grid grid-cols-3 gap-3">
                                 {[
                                     {id: 'selfie', label: 'Selfie', icon: Users},
@@ -2790,7 +2615,7 @@ export default function GuardiaPortal() {
                                     {id: 'art', label: 'ART', icon: Briefcase}
                                 ].map(p => (
                                     <div key={p.id} className="space-y-2">
-                                        <div className="relative aspect-square bg-slate-950 rounded-2xl border border-white/10 flex items-center justify-center overflow-hidden group">
+                                        <div className="relative aspect-square bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-center overflow-hidden group shadow-inner">
                                             {manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos] ? (
                                                 <>
                                                     <img src={manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos]} className="w-full h-full object-cover" />
@@ -2800,12 +2625,12 @@ export default function GuardiaPortal() {
                                                 </>
                                             ) : (
                                                 <div className="flex flex-col items-center gap-1">
-                                                    <p className="text-[7px] font-black text-slate-600 uppercase">{p.label}</p>
+                                                    <p className="text-[7px] font-black text-slate-400 uppercase">{p.label}</p>
                                                     <button 
                                                         onClick={() => startManualCamera(p.id)}
-                                                        className="mt-1 px-3 py-1.5 bg-emerald-500 text-white rounded-lg font-black text-[7px] uppercase tracking-widest active:scale-95 transition-all flex items-center gap-1 shadow-lg shadow-emerald-500/20"
+                                                        className="mt-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-black text-[7px] uppercase tracking-widest active:scale-95 transition-all flex items-center gap-1 shadow-lg shadow-emerald-500/10"
                                                     >
-                                                       <Camera className="w-3 h-3" /> Tomar
+                                                       <Camera className="w-3 h-3 text-white" /> Tomar
                                                     </button>
                                                 </div>
                                             )}
@@ -2828,69 +2653,69 @@ export default function GuardiaPortal() {
             </div>
         )}
         {isAddingPermanente && (
-            <div className="fixed inset-0 z-[200] bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
-                <div className="bg-slate-900 border border-white/10 w-full max-w-lg rounded-[3.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
-                    <div className="p-10 border-b border-white/5 bg-gradient-to-br from-emerald-500/10 to-transparent">
+            <div className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <div className="bg-white border border-slate-200 w-full max-w-lg rounded-[3.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.1)] overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
+                    <div className="p-10 border-b border-slate-100 bg-emerald-50/50">
                         <div className="flex items-center justify-between mb-2">
-                             <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-400">
+                             <div className="p-3 bg-white rounded-2xl text-emerald-600 border border-emerald-100 shadow-sm">
                                 <UserPlus className="w-6 h-6" />
                              </div>
-                             <button onClick={() => setIsAddingPermanente(false)} className="p-2 hover:bg-white/5 rounded-full text-slate-500 transition-all"><X className="w-6 h-6" /></button>
+                             <button onClick={() => setIsAddingPermanente(false)} className="p-3 bg-white border border-slate-100 rounded-full text-slate-400 hover:bg-slate-50 transition-all"><X className="w-6 h-6" /></button>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Nuevo Permanente</h3>
-                        <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">Familiares o servicios con acceso fijo</p>
+                        <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Nuevo Permanente</h3>
+                        <p className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">Familiares o servicios con acceso fijo</p>
                     </div>
                     
                     <div className="p-10 space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Nombre Completo</label>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Nombre Completo</label>
                                 <input 
                                     type="text" 
                                     placeholder="EJ: ANA MARÍA"
                                     value={newPermanente.full_name}
                                     onChange={(e) => setNewPermanente({...newPermanente, full_name: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">DNI</label>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">DNI</label>
                                 <input 
                                     type="text" 
                                     placeholder="SÓLO NÚMEROS"
                                     value={newPermanente.dni}
                                     onChange={(e) => setNewPermanente({...newPermanente, dni: e.target.value})}
-                                    className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
                                 />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Categoría</label>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Categoría</label>
                                 <input 
                                     type="text" 
                                     placeholder="EJ: FAMILIAR"
                                     value={newPermanente.category}
                                     onChange={(e) => setNewPermanente({...newPermanente, category: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Vinculación / Lote</label>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Vinculación / Lote</label>
                                 <input 
                                     type="text" 
                                     placeholder="EJ: LOTE 210"
                                     value={newPermanente.employer}
                                     onChange={(e) => setNewPermanente({...newPermanente, employer: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-950 border border-white/5 rounded-2xl p-4 text-xs font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-white"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
                                 />
                             </div>
                         </div>
 
                         {/* DOCUMENTACIÓN PERMANENTE */}
-                        <div className="space-y-4 pt-4 border-t border-white/5">
-                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2">Fotos de Identidad</p>
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Fotos de Identidad</p>
                             <div className="grid grid-cols-3 gap-3">
                                 {[
                                     {id: 'selfie', label: 'Selfie', icon: Users},
@@ -2898,7 +2723,7 @@ export default function GuardiaPortal() {
                                     {id: 'dni_back', label: 'DNI Back', icon: ImageIcon}
                                 ].map(p => (
                                     <div key={p.id} className="space-y-2">
-                                        <div className="relative aspect-square bg-slate-950 rounded-2xl border border-white/10 flex items-center justify-center overflow-hidden group">
+                                        <div className="relative aspect-square bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-center overflow-hidden group shadow-inner">
                                             {manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos] ? (
                                                 <>
                                                     <img src={manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos]} className="w-full h-full object-cover" />
@@ -2908,12 +2733,12 @@ export default function GuardiaPortal() {
                                                 </>
                                             ) : (
                                                 <div className="flex flex-col items-center gap-1">
-                                                    <p className="text-[7px] font-black text-slate-600 uppercase">{p.label}</p>
+                                                    <p className="text-[7px] font-black text-slate-400 uppercase">{p.label}</p>
                                                     <button 
                                                         onClick={() => startManualCamera(p.id)}
-                                                        className="mt-1 px-3 py-1.5 bg-emerald-500 text-white rounded-lg font-black text-[7px] uppercase tracking-widest active:scale-95 transition-all flex items-center gap-1 shadow-lg shadow-emerald-500/20"
+                                                        className="mt-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-black text-[7px] uppercase tracking-widest active:scale-95 transition-all flex items-center gap-1 shadow-lg shadow-emerald-500/10"
                                                     >
-                                                       <Camera className="w-3 h-3" /> Tomar
+                                                       <Camera className="w-3 h-3 text-white" /> Tomar
                                                     </button>
                                                 </div>
                                             )}
