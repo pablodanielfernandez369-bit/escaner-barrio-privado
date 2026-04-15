@@ -1,80 +1,107 @@
 @import "tailwindcss";
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 2, 6, 23;
-  --background-end-rgb: 2, 6, 23;
+    --background: 34 33% 98%; /* #fafaf9 */
+  --foreground: 222 47% 11%;
+    --primary: 161 94% 30%; /* #064e3b - Deep Emerald */
+  --primary-foreground: 0 0% 100%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 161 94% 30%;
+    --radius: 1.5rem;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
-  min-height: 100vh;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: hsl(var(--foreground));
+    background: hsl(var(--background));
+    min-height: 100vh;
+    letter-spacing: -0.01em;
 }
 
-/* Glassmorphism Classes */
-.glass {
-  @apply bg-white/5 backdrop-blur-xl border border-white/10;
+/* Luxury Glassmorphism */
+.luxury-card {
+    background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.glass-card {
-  @apply bg-slate-900/50 backdrop-blur-2xl border border-white/10 shadow-2xl;
+.luxury-card:hover {
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px);
 }
 
-.glass-emerald {
-  @apply bg-emerald-500/5 backdrop-blur-xl border border-emerald-500/10;
+.luxury-input {
+    background-color: white;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
 }
 
-/* Animations */
-@keyframes scan {
-  from { transform: translateY(-100%); }
-  to { transform: translateY(100%); }
+.luxury-input:focus {
+    border-color: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.05);
+    outline: none;
 }
 
-@keyframes pulse-emerald {
-  0%, 100% { opacity: 0.1; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(1.05); }
+.sage-blur {
+    background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
 }
 
-.animate-scan {
-  animation: scan 4s linear infinite;
+/* Typography Utilities */
+.tracking-luxury {
+    letter-spacing: 0.2em;
 }
 
-.animate-pulse-emerald {
-  animation: pulse-emerald 4s ease-in-out infinite;
+.text-balance {
+    text-wrap: balance;
 }
 
-.scanning-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(to right, transparent, #10b981, transparent);
-  box-shadow: 0 0 15px #10b981;
-  animation: scan 3s linear infinite;
-  z-index: 20;
+/* New Animations */
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
 }
 
-/* Custom Effects */
-.emerald-glow {
-  box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+.animate-float {
+    animation: float 6s ease-in-out infinite;
 }
 
-.text-gradient-emerald {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-200;
-}
-
-/* Scrollbar */
+/* Custom Scrollbar for Luxury Theme */
 ::-webkit-scrollbar {
-  width: 6px;
+    width: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-white/10 rounded-full hover:bg-emerald-500/20 transition-colors;
+    background-color: #e2e8f0;
+    border-radius: 9999px;
+    transition: background-color 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #d1fae5;
+}
+
+/* Biometric Scan Luxury Effect */
+.scanning-luxury {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent 0%, rgba(16, 185, 129, 0.07) 50%, transparent 100%);
+    background-size: 100% 200%;
+    animation: scan-slow 3s linear infinite;
+}
+
+@keyframes scan-slow {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
 }
