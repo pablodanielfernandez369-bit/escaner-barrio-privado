@@ -794,35 +794,51 @@ export default function OwnerDashboard() {
                                 status = 'approved';
                             }
                             
-                            const cleanName = invName.replace(/ \[.*\]/, "");
+                            const isDelivery = inv.type === 'delivery';
+                            const cleanName = isDelivery ? "DELIVERY" : invName.replace(/ \[.*\]/, "");
                             const initChar = cleanName !== "Invitado a Identificar" ? cleanName[0].toUpperCase() : "I";
-                            const dniToShow = rec?.dni || inv.visitor_dni || "";
+                            const dniToShow = isDelivery ? "" : (rec?.dni || inv.visitor_dni || "");
                             
                                 
                         return (
                             <div key={inv.id} className="bg-slate-900 border border-white/5 p-5 rounded-[2rem] flex items-center justify-between group hover:border-emerald-500/20 transition-all">
                                 <div className="flex items-center gap-4">
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm ${
-                                        status === 'inside' ? 'bg-emerald-500/20 text-emerald-400' : 
-                                        status === 'completed' ? 'bg-red-500/20 text-red-500' :
+                                        status === 'inside' || (isDelivery && inv.delivery_count > 0) ? 'bg-emerald-500/20 text-emerald-400' : 
+                                        status === 'completed' || (isDelivery && inv.delivery_count >= inv.delivery_quantity) ? 'bg-red-500/20 text-red-500' :
+                                        isDelivery ? 'bg-blue-500/20 text-blue-400' :
                                         'bg-slate-800 text-slate-500'
                                     }`}>
-                                        {initChar}
+                                        {isDelivery ? <Zap className="w-5 h-5" /> : initChar}
                                     </div>
                                     <div>
                                         <h4 className="font-black uppercase text-xs text-white group-hover:text-emerald-400 transition-colors">
-                                            {cleanName} <span className="text-slate-500 ml-1">DNI {dniToShow || "---"}</span>
+                                            {cleanName} {dniToShow && <span className="text-slate-500 ml-1">DNI {dniToShow}</span>}
                                         </h4>
                                         <p className="text-[10px] font-black uppercase text-slate-500 mt-0.5 tracking-tight">
-                                            {inv.type === 'visit' ? 'VISITA' : inv.type === 'worker' ? 'TRABAJADOR' : 'PERMANENTE'}
+                                            {inv.type === 'visit' ? 'VISITA' : inv.type === 'worker' ? 'TRABAJADOR' : inv.type === 'delivery' ? 'DELIVERY' : 'PERMANENTE'}
                                         </p>
                                         <div className="mt-2 flex items-center gap-2">
-                                            {status === 'no_registered' && <span className="text-[8px] font-black uppercase text-slate-400 bg-slate-800/50 px-2 py-0.5 rounded border border-white/5">Esperando Registro</span>}
-                                            {status === 'pending' && <span className="text-[8px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded animate-pulse">Registro Pendiente</span>}
-                                            {status === 'approved' && <span className="text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Por ingresar al barrio</span>}
-                                            {status === 'inside' && <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">Ingresó al barrio</span>}
-                                            {status === 'completed' && <span className="text-[8px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded">Salió del barrio</span>}
-                                            {status === 'rejected' && <span className="text-[8px] font-black uppercase text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">Registro Rechazado</span>}
+                                            {isDelivery ? (
+                                                <>
+                                                    {inv.delivery_count === 0 ? (
+                                                        <span className="text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Por ingresar al barrio</span>
+                                                    ) : (
+                                                        <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">
+                                                            Ingresó al barrio ({inv.delivery_count} de {inv.delivery_quantity})
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {status === 'no_registered' && <span className="text-[8px] font-black uppercase text-slate-400 bg-slate-800/50 px-2 py-0.5 rounded border border-white/5">Esperando Registro</span>}
+                                                    {status === 'pending' && <span className="text-[8px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded animate-pulse">Registro Pendiente</span>}
+                                                    {status === 'approved' && <span className="text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Por ingresar al barrio</span>}
+                                                    {status === 'inside' && <span className="text-[8px] font-black uppercase text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded">Ingresó al barrio</span>}
+                                                    {status === 'completed' && <span className="text-[8px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded">Salió del barrio</span>}
+                                                    {status === 'rejected' && <span className="text-[8px] font-black uppercase text-red-600 bg-red-600/10 px-2 py-0.5 rounded border border-red-600/20">Registro Rechazado</span>}
+                                                </>
+                                            )}
 
                                             {isTenure && hasValidDates && (
                                               <span className="text-[8px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Autorización Activa</span>

@@ -70,6 +70,7 @@ export default function GuardiaPortal() {
   const [permanentes, setPermanentes] = useState<any[]>([]);
   const [permanentesSearch, setPermanentesSearch] = useState("");
   const [deliveryInvitations, setDeliveryInvitations] = useState<any[]>([]);
+  const [deliverySearch, setDeliverySearch] = useState("");
   
   // Owner Search State
   const [ownerSearch, setOwnerSearch] = useState("");
@@ -1480,51 +1481,68 @@ export default function GuardiaPortal() {
                 )}
             </div>
         )}
-
         {activeTab === 'delivery' && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-2 px-4">
-                  <h2 className="text-white font-black uppercase tracking-widest text-xs">Control de Deliveries</h2>
-                  <span className="text-[9px] font-black uppercase text-blue-500 bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20">Autorizados Hoy</span>
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4">
+                  <div>
+                    <h2 className="text-white font-black uppercase tracking-widest text-xs">Control de Deliveries</h2>
+                    <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mt-1">Autorizados para el día de hoy</p>
+                  </div>
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input 
+                        type="text"
+                        placeholder="BUSCAR POR LOTE O NOMBRE..."
+                        value={deliverySearch}
+                        onChange={(e) => setDeliverySearch(e.target.value)}
+                        className="w-full bg-slate-900 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-blue-500/50 transition-all"
+                    />
+                  </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {deliveryInvitations.length > 0 ? (
-                        deliveryInvitations.map(inv => {
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {deliveryInvitations.filter(inv => 
+                        inv.profiles?.lote?.toString().includes(deliverySearch) || 
+                        inv.profiles?.full_name?.toLowerCase().includes(deliverySearch.toLowerCase())
+                    ).length > 0 ? (
+                        deliveryInvitations.filter(inv => 
+                            inv.profiles?.lote?.toString().includes(deliverySearch) || 
+                            inv.profiles?.full_name?.toLowerCase().includes(deliverySearch.toLowerCase())
+                        ).map(inv => {
                             const isCompleted = inv.delivery_count >= inv.delivery_quantity;
                             return (
-                                <div key={inv.id} className={`bg-slate-900 border ${isCompleted ? 'border-white/5 opacity-50' : 'border-blue-500/20 shadow-[0_20px_40px_rgba(59,130,246,0.1)]'} p-6 rounded-[2.5rem] transition-all relative overflow-hidden group`}>
-                                    {!isCompleted && <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 blur-3xl rounded-full" />}
+                                <div key={inv.id} className={`bg-slate-900 border ${isCompleted ? 'border-white/5 opacity-50' : 'border-blue-500/20 shadow-lg'} p-4 rounded-3xl transition-all relative overflow-hidden group`}>
+                                    {!isCompleted && <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 blur-2xl rounded-full" />}
                                     
-                                    <div className="flex justify-between items-start mb-6">
-                                        <div className="p-4 bg-blue-500/10 rounded-2xl text-blue-400">
-                                            <Zap className="w-6 h-6" />
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+                                            <Zap className="w-5 h-5" />
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">Lote</p>
-                                            <h4 className="text-2xl font-black text-white leading-none">{inv.profiles?.lote}</h4>
+                                            <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-0.5">Lote</p>
+                                            <h4 className="text-xl font-black text-white leading-none">{inv.profiles?.lote}</h4>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4 mb-8">
+                                    <div className="space-y-3 mb-6">
                                         <div>
-                                            <p className="text-[8px] font-black uppercase text-slate-500 tracking-[0.2em] mb-1">Autorizado por</p>
-                                            <p className="text-sm font-black text-white uppercase truncate">{inv.profiles?.full_name}</p>
+                                            <p className="text-[7px] font-black uppercase text-slate-500 tracking-[0.2em] mb-0.5">Autorizado por</p>
+                                            <p className="text-xs font-black text-white uppercase truncate">{inv.profiles?.full_name}</p>
                                         </div>
                                         
                                         <div className="flex items-end justify-between">
                                             <div>
-                                                <p className="text-[8px] font-black uppercase text-slate-500 tracking-[0.2em] mb-1">Progreso hoy</p>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-2xl font-black text-blue-400">{inv.delivery_count}</span>
-                                                    <span className="text-slate-600 text-lg">/</span>
-                                                    <span className="text-slate-400 text-lg font-black">{inv.delivery_quantity}</span>
+                                                <p className="text-[7px] font-black uppercase text-slate-500 tracking-[0.2em] mb-0.5">Progreso</p>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-xl font-black text-blue-400">{inv.delivery_count}</span>
+                                                    <span className="text-slate-600 text-sm">/</span>
+                                                    <span className="text-slate-400 text-sm font-black">{inv.delivery_quantity}</span>
                                                 </div>
                                             </div>
                                             {isCompleted && (
-                                                <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
-                                                    <CheckCircle2 className="w-4 h-4" />
-                                                    <span className="text-[8px] font-black uppercase">Completado</span>
+                                                <div className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    <span className="text-[7px] font-black uppercase">Completado</span>
                                                 </div>
                                             )}
                                         </div>
@@ -1533,10 +1551,10 @@ export default function GuardiaPortal() {
                                     <button 
                                         disabled={isCompleted}
                                         onClick={() => handleIncrementDeliveryCount(inv.id, inv.delivery_count, inv.delivery_quantity)}
-                                        className={`w-full py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 ${
+                                        className={`w-full py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
                                             isCompleted 
                                             ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/20'
+                                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/10'
                                         }`}
                                     >
                                         {isCompleted ? 'Todos Ingresados' : <><Hand className="w-4 h-4" /> Registrar Ingreso</>}
@@ -1545,9 +1563,9 @@ export default function GuardiaPortal() {
                             );
                         })
                     ) : (
-                        <div className="col-span-full py-20 bg-slate-900/50 rounded-[3rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
-                            <Zap className="w-12 h-12 text-slate-800 mb-4" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay pases de delivery para hoy</p>
+                        <div className="col-span-full py-16 bg-slate-900/50 rounded-3xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center">
+                            <Zap className="w-10 h-10 text-slate-800 mb-3" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-700 italic">No hay pases de delivery que coincidan</p>
                         </div>
                     )}
                 </div>
