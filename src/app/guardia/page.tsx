@@ -1438,9 +1438,13 @@ export default function GuardiaPortal() {
                     </button>
                 </div>
 
+                {expectedToday.length > 0 && (
                 <div className="grid grid-cols-1 gap-2">
-                    <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em] ml-4 mb-2">Invitados en camino</h4>
-                    {expectedToday.map(v => (
+                    <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em] ml-4 mb-2">Invitados en camino ({expectedToday.length})</h4>
+                    {expectedToday.map(v => {
+                        const displayName = (v as any).visitor_name || v.full_name || '—';
+                        const displayLote = (v as any).profiles?.lote || v.invitations?.profiles?.lote || '—';
+                        return (
                         <div key={v.id} 
                             className="bg-white/5 p-4 rounded-xl border border-white/5 flex items-center justify-between group cursor-pointer hover:bg-emerald-500/5 transition-all"
                         >
@@ -1451,16 +1455,18 @@ export default function GuardiaPortal() {
                               } catch (e) {}
                               startCamera(true, v);
                             }}>
-                                <p className="font-bold uppercase tracking-tight text-white group-hover:text-emerald-400">{v.full_name}</p>
-                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Lote {v.invitations?.profiles?.lote}</p>
+                                <p className="font-bold uppercase tracking-tight text-white group-hover:text-emerald-400">{displayName}</p>
+                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Lote {displayLote}</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => handleStatusUpdate(v.id, 'inside', (v as any).invitations?.id)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest">Ingresar</button>
+                                <button onClick={() => handleStatusUpdate(v.id, 'inside', (v as any).invitations?.id || (v as any).id)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest">Ingresar</button>
                                 <button onClick={() => handleDeleteRecord(v.id)} className="p-2 text-slate-700 hover:text-red-500"><X className="w-4 h-4" /></button>
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
+                )}
             </div>
         )}
 
