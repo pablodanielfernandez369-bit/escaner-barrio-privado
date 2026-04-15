@@ -147,6 +147,11 @@ export default function OwnerDashboard() {
 
       // FILTRO ROBUSTO: Solo mostrar si tiene registros biométricos O si el nombre NO es el placeholder
       const filteredData = sortedData.filter(inv => {
+        // Si es delivery y ya entraron todos, ocultarlo
+        if (inv.type === 'delivery' && inv.delivery_count >= inv.delivery_quantity) {
+          return false;
+        }
+
         const hasRecords = inv.visitor_records && inv.visitor_records.length > 0;
         const currentName = (inv.visitor_name || "").trim().toLowerCase();
         const pkgName = "invitado a identificar";

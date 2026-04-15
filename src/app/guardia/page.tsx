@@ -1511,54 +1511,40 @@ export default function GuardiaPortal() {
                         ).map(inv => {
                             const isCompleted = inv.delivery_count >= inv.delivery_quantity;
                             return (
-                                <div key={inv.id} className={`bg-slate-900 border ${isCompleted ? 'border-white/5 opacity-50' : 'border-blue-500/20 shadow-lg'} p-4 rounded-3xl transition-all relative overflow-hidden group`}>
-                                    {!isCompleted && <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 blur-2xl rounded-full" />}
-                                    
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                                            <Zap className="w-5 h-5" />
+                                <div key={inv.id} className={`bg-slate-900 border ${isCompleted ? 'border-white/5 opacity-50' : 'border-blue-500/20 shadow-md'} p-3 rounded-2xl transition-all relative overflow-hidden group`}>
+                                    <div className="flex items-center gap-4">
+                                        {/* Izquierda: Lote */}
+                                        <div className="bg-slate-950 px-3 py-1.5 rounded-xl border border-white/5 text-center min-w-[50px]">
+                                            <span className="text-[7px] font-black text-slate-600 block uppercase leading-none mb-1">Lote</span>
+                                            <span className="text-lg font-black text-white leading-none">{inv.profiles?.lote}</span>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-[9px] font-black uppercase text-slate-500 tracking-widest mb-0.5">Lote</p>
-                                            <h4 className="text-xl font-black text-white leading-none">{inv.profiles?.lote}</h4>
-                                        </div>
-                                    </div>
 
-                                    <div className="space-y-3 mb-6">
-                                        <div>
-                                            <p className="text-[7px] font-black uppercase text-slate-500 tracking-[0.2em] mb-0.5">Autorizado por</p>
-                                            <p className="text-xs font-black text-white uppercase truncate">{inv.profiles?.full_name}</p>
-                                        </div>
-                                        
-                                        <div className="flex items-end justify-between">
-                                            <div>
-                                                <p className="text-[7px] font-black uppercase text-slate-500 tracking-[0.2em] mb-0.5">Progreso</p>
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-xl font-black text-blue-400">{inv.delivery_count}</span>
-                                                    <span className="text-slate-600 text-sm">/</span>
-                                                    <span className="text-slate-400 text-sm font-black">{inv.delivery_quantity}</span>
-                                                </div>
+                                        {/* Centro: Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[10px] font-black text-white uppercase truncate mb-0.5">{inv.profiles?.full_name}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest leading-none">Progreso:</p>
+                                                <span className="text-xs font-black text-blue-400 leading-none">{inv.delivery_count} / {inv.delivery_quantity}</span>
                                             </div>
-                                            {isCompleted && (
-                                                <div className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20">
-                                                    <CheckCircle2 className="w-3 h-3" />
-                                                    <span className="text-[7px] font-black uppercase">Completado</span>
-                                                </div>
-                                            )}
                                         </div>
-                                    </div>
 
-                                    <button 
-                                        disabled={isCompleted}
-                                        onClick={() => handleIncrementDeliveryCount(inv.id, inv.delivery_count, inv.delivery_quantity)}
-                                        className={`w-full py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
-                                            isCompleted 
-                                            ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/10'
-                                        }`}
-                                    >
-                                        {isCompleted ? 'Todos Ingresados' : <><Hand className="w-4 h-4" /> Registrar Ingreso</>}
-                                    </button>
+                                        {/* Derecha: Botón */}
+                                        <button 
+                                            disabled={isCompleted}
+                                            onClick={() => handleIncrementDeliveryCount(inv.id, inv.delivery_count, inv.delivery_quantity)}
+                                            className={`px-4 py-2.5 rounded-xl font-black text-[8px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                                                isCompleted 
+                                                ? 'bg-emerald-500/10 text-emerald-500 cursor-not-allowed border border-emerald-500/20'
+                                                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm'
+                                            }`}
+                                        >
+                                            {isCompleted ? (
+                                                <><CheckCircle2 className="w-3 h-3" /> OK</>
+                                            ) : (
+                                                <><Hand className="w-3 h-3" /> Ingresar</>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })
