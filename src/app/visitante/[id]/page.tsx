@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
+import { CONFIG } from "@/config";
 
 export default function VisitorPass() {
   const { id } = useParams();
@@ -261,7 +262,7 @@ export default function VisitorPass() {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
         <Loader2 className="w-12 h-12 text-emerald-500 animate-spin mb-6" />
-        <p className="text-emerald-500 font-black uppercase tracking-[0.3em] animate-pulse text-[10px]">Santa Inés • Acceso Digital</p>
+        <p className="text-emerald-500 font-black uppercase tracking-[0.3em] animate-pulse text-[10px]">{CONFIG.neighborhoodName} • Acceso Digital</p>
       </div>
     );
   }
@@ -284,11 +285,11 @@ export default function VisitorPass() {
     <div className="min-h-screen bg-slate-950 p-6 flex flex-col items-center pb-20">
       {/* Branding Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md flex flex-col items-center mb-10 mt-4">
-        <div className="p-4 bg-emerald-500/10 rounded-2xl mb-4 border border-emerald-500/20">
+        <div className="p-4 bg-emerald-500/10 rounded-2xl mb-4 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
           <ShieldCheck className="w-8 h-8 text-emerald-500" />
         </div>
-        <h1 className="text-xl font-black uppercase tracking-[0.2em] text-white">Barrio Seguro</h1>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/70">Santa Inés • Acceso Digital <span className="opacity-30">v6.5</span></p>
+        <h1 className="text-xl font-black uppercase tracking-[0.2em] text-white italic">{CONFIG.brandName}</h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/70">{CONFIG.neighborhoodName} • Acceso Digital <span className="opacity-30">v6.5</span></p>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md">

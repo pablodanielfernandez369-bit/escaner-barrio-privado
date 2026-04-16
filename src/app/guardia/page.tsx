@@ -9,7 +9,7 @@ import {
   Search, Loader2, PlayCircle, LogOut, ChevronDown, UserX, Briefcase,
   Settings, Lock, Save, ShieldCheck, Maximize2, Minimize2, LogIn, LogOut as LogOutIcon, Trash2, History, X, Users2, Building2,
   CheckCircle, ShieldAlert, UserPlus, Hand, Home, Image as ImageIcon,
-  Car, Zap
+  Car, Zap, Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CONFIG } from "@/lib/config";
@@ -1336,10 +1336,13 @@ export default function GuardiaPortal() {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center font-black text-emerald-500 uppercase tracking-widest animate-pulse">Cargando sistema...</div>;
-
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-emerald-500/10 overflow-x-hidden relative">
+      {/* Mesh Background */}
+      <div className="fixed inset-0 pointer-events-none opacity-40 z-0">
+        <div className="absolute top-[-10%] right-[-5%] w-[60%] h-[60%] bg-emerald-500/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-5%] left-[-5%] w-[40%] h-[40%] bg-emerald-900/5 rounded-full blur-[100px]" />
+      </div>
       
       {zoomedImg && (
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={() => setZoomedImg(null)}>
@@ -1423,316 +1426,341 @@ export default function GuardiaPortal() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto p-4 sm:p-8">
-        <header className="flex flex-col sm:flex-row justify-between gap-6 mb-12">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-200">
-              <Building2 className="w-10 h-10 text-emerald-600" />
+      <div className="max-w-7xl mx-auto p-6 md:p-12 relative z-10">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16 animate-in fade-in slide-in-from-top-4 duration-1000">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 bg-white/5 luxury-card rounded-[2rem] flex items-center justify-center border border-white/5">
+              <Building2 className="w-8 h-8 text-emerald-500" />
             </div>
             <div>
-              <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">Barrio Seguro</h1>
-              <p className="text-emerald-600 font-black uppercase tracking-[0.3em] text-[10px]">Santa Inés • Guardia</p>
+              <h1 className="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-500 tracking-tighter uppercase leading-none">
+                {CONFIG.brandName}
+              </h1>
+              <p className="text-[12px] font-black text-emerald-500 uppercase tracking-[0.5em] mt-3 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4" /> {CONFIG.neighborhoodName} • GUARDIA
+              </p>
             </div>
           </div>
-          <button onClick={() => { supabase.auth.signOut(); router.push("/"); }} className="px-6 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm">Salir</button>
+          
+          <div className="flex items-center gap-4">
+             <div className="hidden lg:block text-right mr-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/40">Guardia Activo</p>
+                <p className="text-sm font-black text-white uppercase italic">Misión Control</p>
+             </div>
+             <button 
+               onClick={() => { supabase.auth.signOut(); router.push("/"); }} 
+               className="w-14 h-14 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 luxury-card rounded-2xl flex items-center justify-center group transition-all"
+             >
+               <LogOut className="w-5 h-5" />
+             </button>
+          </div>
         </header>
 
-        <div className="flex p-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm mb-8 w-fit overflow-x-auto gap-1">
-          {['accesos', 'salidas', 'delivery', 'registros', 'identidades', 'trabajadores', 'permanentes', 'historial', 'propietarios', 'config'].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab as any)} className={`relative px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
-              {tab === 'registros' ? (
-                <>
-                    {`Registros (${pendingVisitors.length + pendingOwners.length})`}
-                    {(pendingVisitors.length + pendingOwners.length) > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center text-[8px] animate-pulse border-2 border-white">!</span>
-                    )}
-                </>
-              ) : tab === 'delivery' ? (
-                <>
-                  {`Delivery (${deliveryInvitations.filter(d => d.delivery_count < d.delivery_quantity).length})`}
-                  {deliveryInvitations.some(d => d.delivery_count < d.delivery_quantity) && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center text-[8px] animate-pulse border-2 border-white">!</span>
+        <div className="horizontal-scroll pb-4 mb-12">
+          <div className="flex p-2 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] border border-white/5 luxury-card w-fit gap-1 shadow-2xl">
+            {[
+              { id: 'accesos', label: 'Ingresos', icon: LogIn },
+              { id: 'salidas', label: 'Egresos', icon: LogOutIcon },
+              { id: 'delivery', label: 'Delivery', icon: Zap },
+              { id: 'registros', label: 'Auditoría', icon: ShieldPlus },
+              { id: 'identidades', label: 'Personas', icon: Users2 },
+              { id: 'trabajadores', label: 'Trabajo', icon: Briefcase },
+              { id: 'permanentes', label: 'Perma', icon: Clock },
+              { id: 'historial', label: 'Historial', icon: History },
+              { id: 'propietarios', label: 'Vecinos', icon: Home },
+              { id: 'config', label: 'Ajustes', icon: Settings }
+            ].map(tab => {
+              const count = tab.id === 'registros' ? (pendingVisitors.length + pendingOwners.length) : 
+                            tab.id === 'delivery' ? deliveryInvitations.filter(d => d.delivery_count < d.delivery_quantity).length : 0;
+              
+              return (
+                <button 
+                  key={tab.id} 
+                  onClick={() => setActiveTab(tab.id as any)} 
+                  className={`relative px-6 py-3.5 rounded-[1.2rem] font-black text-[9px] uppercase tracking-[0.15em] transition-all flex items-center gap-3 whitespace-nowrap ${
+                    activeTab === tab.id 
+                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' 
+                      : 'text-slate-500 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                  {count > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 rounded-full flex items-center justify-center text-[8px] font-black text-white border-2 border-slate-900 animate-pulse">
+                      {count}
+                    </span>
                   )}
-                </>
-              ) : tab === 'identidades' ? 'Identidades' : tab === 'trabajadores' ? 'Trabajadores' : tab === 'permanentes' ? 'Permanentes' : tab === 'config' ? 'Config' : tab}
-            </button>
-          ))}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {activeTab === 'accesos' && (
-            <div className="space-y-12">
-                <div className="bg-emerald-50 border border-emerald-100 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-                    <div>
-                        <h3 className="text-xl font-black uppercase tracking-tighter mb-2 text-slate-900">Escáner IA Inteligente</h3>
-                        <p className="text-emerald-700 text-[10px] font-bold uppercase tracking-wide">Acceso automático mediante reconocimiento facial biométrico.</p>
-                    </div>
-                    <button 
-                        disabled={!isFaceApiLoaded}
-                        onClick={async () => {
-                          try {
-                            if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-                            else if ((document.documentElement as any).webkitRequestFullscreen) await (document.documentElement as any).webkitRequestFullscreen();
-                          } catch (e) {}
-                          startCamera(true, null, true);
-                        }}
-                        className="bg-emerald-600 hover:bg-emerald-700 px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/10 flex items-center gap-3 transition-all active:scale-95 text-white"
-                    >
-                        {isFaceApiLoaded ? <><Camera className="w-5 h-5" /> Iniciar IA</> : <Loader2 className="w-5 h-5 animate-spin" />}
-                    </button>
+          <div className="space-y-12 animate-in fade-in duration-700">
+            <div className="luxury-card p-10 bg-gradient-to-br from-emerald-600 to-emerald-900 text-white relative overflow-hidden group border border-white/5 shadow-2xl">
+              <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-[80px] group-hover:bg-white/20 transition-all duration-1000" />
+              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-black uppercase tracking-tighter italic">Escáner IA Inteligente</h3>
+                  <p className="text-white/80 text-[10px] font-black uppercase tracking-[0.3em]">Detecta automáticamente a cualquier invitado del día</p>
                 </div>
-
-                {expectedToday.length > 0 && (
-                <div className="grid grid-cols-1 gap-2">
-                    <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.3em] ml-4 mb-2">Invitados en camino ({expectedToday.length})</h4>
-                    {expectedToday.map(v => {
-                        const displayName = (v as any).visitor_name || v.full_name || '—';
-                        const displayLote = (v as any).profiles?.lote || v.invitations?.profiles?.lote || '—';
-                        return (
-                        <div key={v.id} 
-                            className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between group cursor-pointer hover:bg-slate-50 transition-all shadow-sm"
-                        >
-                            <div className="flex-1" onClick={async () => {
-                              try {
-                                if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-                                else if ((document.documentElement as any).webkitRequestFullscreen) await (document.documentElement as any).webkitRequestFullscreen();
-                              } catch (e) {}
-                              startCamera(true, v);
-                            }}>
-                                <p className="font-extrabold uppercase tracking-tight text-slate-900 group-hover:text-emerald-700 transition-colors">{displayName}</p>
-                                <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest">Lote {displayLote}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => handleStatusUpdate(v.id, 'inside', (v as any).invitations?.id || (v as any).id)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-emerald-500/10 transition-all active:scale-95">Ingresar</button>
-                                <button onClick={() => handleDeleteRecord(v.id)} className="p-3 text-slate-400 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
-                            </div>
-                        </div>
-                        );
-                    })}
-                </div>
-                )}
+                <button 
+                  disabled={!isFaceApiLoaded}
+                  onClick={async () => {
+                    try {
+                      if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+                      else if ((document.documentElement as any).webkitRequestFullscreen) await (document.documentElement as any).webkitRequestFullscreen();
+                    } catch (e) {}
+                    startCamera(true, null, true);
+                  }}
+                  className="bg-white/10 backdrop-blur-md border border-white/20 text-white px-10 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest shadow-2xl hover:bg-white hover:text-emerald-900 active:scale-95 transition-all flex items-center gap-4"
+                >
+                  {isFaceApiLoaded ? <><Camera className="w-5 h-5" /> Iniciar IA</> : <Loader2 className="w-5 h-5 animate-spin" />}
+                </button>
+              </div>
             </div>
+
+            {expectedToday.length > 0 && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 ml-2">
+                  <div className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em]">Invitados en camino ({expectedToday.length})</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <AnimatePresence mode="popLayout">
+                    {expectedToday.map((v, idx) => {
+                      const displayName = (v as any).visitor_name || v.full_name || '—';
+                      const displayLote = (v as any).profiles?.lote || v.invitations?.profiles?.lote || '—';
+                      return (
+                        <motion.div key={v.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} layout
+                          className="luxury-card p-6 flex items-center justify-between gap-6 group hover:border-emerald-500/30 transition-colors bg-slate-900/40 border border-white/5"
+                        >
+                          <div className="flex items-center gap-5 flex-1 cursor-pointer" onClick={() => startCamera(true, v)}>
+                            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center font-black text-emerald-500 text-lg border border-white/5">
+                              {displayName[0].toUpperCase()}
+                            </div>
+                            <div className="space-y-1">
+                              <h4 className="text-xs font-black uppercase text-white tracking-tight">{displayName}</h4>
+                              <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Lote {displayLote}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => handleStatusUpdate(v.id, 'inside', (v as any).invitations?.id || (v as any).id)} 
+                              className="h-10 px-6 bg-emerald-600 text-white rounded-xl text-[8px] font-black uppercase tracking-widest shadow-lg shadow-emerald-900/10 hover:bg-emerald-500 transition-all active:scale-95">
+                              Ingresar
+                            </button>
+                            <button onClick={() => handleDeleteRecord(v.id)} className="w-10 h-10 flex items-center justify-center text-slate-600 hover:text-red-500 transition-colors">
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              </div>
+            )}
+          </div>
         )}
         {activeTab === 'delivery' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4">
-                  <div>
-                    <h2 className="text-slate-900 font-extrabold uppercase tracking-widest text-xs">Control de Deliveries</h2>
-                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mt-1">Autorizados para el día de hoy</p>
-                  </div>
-                  <div className="relative w-full sm:w-64">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                        type="text"
-                        placeholder="BUSCAR POR LOTE O NOMBRE..."
-                        value={deliverySearch}
-                        onChange={(e) => setDeliverySearch(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-blue-500/50 transition-all shadow-inner"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {deliveryInvitations.filter(inv => {
-                        const searchMatch = inv.profiles?.lote?.toString().includes(deliverySearch) || 
-                                           inv.profiles?.full_name?.toLowerCase().includes(deliverySearch.toLowerCase());
-                        const isFullyExited = (inv.delivery_exit_count || 0) >= inv.delivery_quantity;
-                        return searchMatch && !isFullyExited;
-                    }).length > 0 ? (
-                        deliveryInvitations.filter(inv => {
-                            const searchMatch = inv.profiles?.lote?.toString().includes(deliverySearch) || 
-                                               inv.profiles?.full_name?.toLowerCase().includes(deliverySearch.toLowerCase());
-                            const isFullyExited = (inv.delivery_exit_count || 0) >= inv.delivery_quantity;
-                            return searchMatch && !isFullyExited;
-                        }).map(inv => {
-                            const entries = inv.delivery_count || 0;
-                            const exits = inv.delivery_exit_count || 0;
-                            const max = inv.delivery_quantity;
-                            const isFullyEntered = entries >= max;
-                            const insideNow = entries - exits;
-
-                            return (
-                                <div key={inv.id} className="bg-white border border-slate-200 shadow-sm p-3 rounded-2xl transition-all relative overflow-hidden group hover:shadow-lg hover:border-blue-200">
-                                    <div className="flex items-center gap-3">
-                                        {/* Izquierda: Lote */}
-                                        <div className="bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100 text-center min-w-[45px] shadow-inner">
-                                            <span className="text-[6px] font-black text-slate-400 block uppercase leading-none mb-1">Lote</span>
-                                            <span className="text-base font-black text-slate-900 leading-none">{inv.profiles?.lote}</span>
-                                        </div>
-
-                                        {/* Centro: Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[9px] font-black text-slate-900 uppercase truncate mb-0.5">{inv.profiles?.full_name}</p>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex items-center gap-1">
-                                                    <LogIn className="w-2.5 h-2.5 text-blue-600" />
-                                                    <span className="text-[9px] font-black text-blue-600">{entries}/{max}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <LogOutIcon className="w-2.5 h-2.5 text-red-600" />
-                                                    <span className="text-[9px] font-black text-red-600">{exits}/{max}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Derecha: Botones */}
-                                        <div className="flex flex-col gap-1">
-                                            <button 
-                                                disabled={isFullyEntered}
-                                                onClick={() => handleDeliveryAction(inv, 'entry')}
-                                                className={`px-3 py-1.5 rounded-lg font-black text-[7px] uppercase tracking-tighter transition-all active:scale-95 flex items-center justify-center gap-1 ${
-                                                    isFullyEntered 
-                                                    ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                                                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/10'
-                                                }`}
-                                            >
-                                                <LogIn className="w-2.5 h-2.5" /> Ingreso
-                                            </button>
-                                            <button 
-                                                disabled={insideNow <= 0}
-                                                onClick={() => handleDeliveryAction(inv, 'exit')}
-                                                className={`px-3 py-1.5 rounded-lg font-black text-[7px] uppercase tracking-tighter transition-all active:scale-95 flex items-center justify-center gap-1 ${
-                                                    insideNow <= 0 
-                                                    ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                                                    : 'bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-500/10'
-                                                }`}
-                                            >
-                                                <LogOutIcon className="w-2.5 h-2.5" /> Egreso
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    ) : (
-                        <div className="col-span-full py-16 bg-white rounded-3xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
-                            <Zap className="w-10 h-10 text-slate-200 mb-3" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay pases de delivery que coincidan</p>
-                        </div>
-                    )}
-                </div>
+          <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-4">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-[#064e3b] uppercase tracking-tighter">Control de Delivery</h3>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Pases activos para el {getLocalDate()}</p>
+              </div>
+              <div className="w-full md:w-80 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input type="text" value={deliverySearch} onChange={e => setDeliverySearch(e.target.value)} placeholder="Filtrar lote o residente..."
+                  className="w-full h-14 luxury-input pl-12 pr-4 rounded-2xl text-[10px] font-black uppercase" />
+              </div>
             </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence mode="popLayout">
+                {deliveryInvitations.filter(inv => {
+                  const searchMatch = inv.profiles?.lote?.toString().includes(deliverySearch) || inv.profiles?.full_name?.toLowerCase().includes(deliverySearch.toLowerCase());
+                  const isFullyExited = (inv.delivery_exit_count || 0) >= inv.delivery_quantity;
+                  return searchMatch && !isFullyExited;
+                }).map((inv, idx) => {
+                  const entries = inv.delivery_count || 0;
+                  const exits = inv.delivery_exit_count || 0;
+                  const max = inv.delivery_quantity;
+                  const insideNow = entries - exits;
+                  const isFullyEntered = entries >= max;
+
+                  return (
+                    <motion.div key={inv.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.05 }} layout
+                      className="luxury-card p-6 space-y-6 relative overflow-hidden group bg-slate-900/40 border border-white/5 shadow-2xl">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Residente</p>
+                          <h4 className="text-xs font-black uppercase text-white">{inv.profiles?.full_name}</h4>
+                          <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Lote {inv.profiles?.lote}</p>
+                        </div>
+                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/5">
+                          <Zap className={`w-5 h-5 ${insideNow > 0 ? 'text-amber-500 fill-amber-500 animate-pulse' : 'text-slate-700'}`} />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                          <div className="flex justify-between items-center mb-1">
+                             <span className="text-[8px] font-black text-slate-500 uppercase">Ingresos</span>
+                             <LogIn className="w-3 h-3 text-slate-600" />
+                          </div>
+                          <p className="text-sm font-black text-white">{entries}<span className="text-slate-600 mx-1">/</span>{max}</p>
+                        </div>
+                        <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                          <div className="flex justify-between items-center mb-1">
+                             <span className="text-[8px] font-black text-slate-500 uppercase">Egresos</span>
+                             <LogOutIcon className="w-3 h-3 text-slate-600" />
+                          </div>
+                          <p className="text-sm font-black text-white">{exits}<span className="text-slate-600 mx-1">/</span>{max}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button disabled={isFullyEntered} onClick={() => handleDeliveryAction(inv, 'entry')}
+                          className={`flex-1 h-12 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${isFullyEntered ? 'opacity-20' : 'bg-emerald-600 text-white hover:bg-emerald-500 active:scale-95 shadow-lg shadow-emerald-900/20'}`}>
+                          Ingreso
+                        </button>
+                        <button disabled={insideNow <= 0} onClick={() => handleDeliveryAction(inv, 'exit')}
+                          className={`flex-1 h-12 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${insideNow <= 0 ? 'opacity-20' : 'bg-white/5 border border-white/10 text-white hover:bg-white/10 active:scale-95'}`}>
+                          Egreso
+                        </button>
+                      </div>
+                      
+                      {insideNow > 0 && <div className="absolute top-0 right-0 p-1 bg-amber-500/20 text-amber-500 text-[6px] font-black uppercase px-2 rounded-bl-lg border-l border-b border-amber-500/20">En Barrio</div>}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          </div>
         )}
 
         {activeTab === 'salidas' && (
-            <div className="space-y-12">
-                <div className="bg-red-50 border border-red-100 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-                    <div>
-                        <h3 className="text-xl font-black uppercase tracking-tighter mb-2 text-slate-900">Escáner IA de Salida</h3>
-                        <p className="text-red-700 text-[10px] font-extrabold uppercase tracking-wide">Reconocimiento facial para registrar egresos</p>
-                    </div>
-                    <button 
-                        disabled={!isFaceApiLoaded}
-                        onClick={async () => {
-                          try {
-                            if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
-                            else if ((document.documentElement as any).webkitRequestFullscreen) await (document.documentElement as any).webkitRequestFullscreen();
-                          } catch (e) {}
-                          startCamera(true, null, true);
-                        }}
-                        className="bg-red-600 hover:bg-red-700 text-white px-8 py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-red-500/10 flex items-center gap-3 transition-all active:scale-95"
-                    >
-                        {isFaceApiLoaded ? <><Camera className="w-5 h-5" /> Iniciar IA de Salida</> : <Loader2 className="w-5 h-5 animate-spin" />}
-                    </button>
+          <div className="space-y-12 animate-in fade-in duration-700">
+            <div className="luxury-card p-10 bg-gradient-to-br from-red-900 to-red-950 text-white relative overflow-hidden group">
+              <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-red-500/10 rounded-full blur-[80px] group-hover:bg-red-400/20 transition-all duration-1000" />
+              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-black uppercase tracking-tighter italic">Control de Egreso IA</h3>
+                  <p className="text-red-300/80 text-[10px] font-black uppercase tracking-[0.3em]">Salida automática por reconocimiento facial</p>
                 </div>
+                <button 
+                  disabled={!isFaceApiLoaded}
+                  onClick={async () => {
+                    try {
+                      if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+                      else if ((document.documentElement as any).webkitRequestFullscreen) await (document.documentElement as any).webkitRequestFullscreen();
+                    } catch (e) {}
+                    startCamera(true, null, true);
+                  }}
+                  className="bg-red-600 text-white px-10 py-5 rounded-[2rem] font-black text-[10px] uppercase tracking-widest shadow-xl shadow-red-900/40 hover:bg-red-500 hover:scale-105 active:scale-95 transition-all flex items-center gap-4 border border-red-500/50"
+                >
+                  {isFaceApiLoaded ? <><Camera className="w-5 h-5" /> Iniciar Salida IA</> : <Loader2 className="w-5 h-5 animate-spin" />}
+                </button>
+              </div>
+            </div>
 
-                <div className="flex items-center gap-3 mb-6 ml-4">
-                    <LogOutIcon className="w-5 h-5 text-red-600" />
-                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Personas en el Barrio ({insideNeighborhood.length})</h3>
-                </div>
-                
-                {insideNeighborhood.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {insideNeighborhood.map(v => (
-                      <div key={v.id} className="bg-white border border-slate-200 p-6 rounded-3xl flex items-center justify-between group shadow-sm hover:border-red-200 transition-all">
-                          <div>
-                              <h4 className="font-extrabold uppercase text-slate-900 mb-1 group-hover:text-red-600 transition-colors">{v.full_name}</h4>
-                              <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">INGRESÓ A LAS {new Date(v.entry_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 ml-2">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em]">Personas en el Barrio ({insideNeighborhood.length})</h4>
+              </div>
+              
+              {insideNeighborhood.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <AnimatePresence mode="popLayout">
+                    {insideNeighborhood.map((v, idx) => (
+                        <motion.div key={v.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} layout
+                          className="luxury-card p-6 flex items-center justify-between gap-6 group hover:border-red-500/30 transition-colors bg-slate-900/40 border border-white/5 shadow-xl">
+                          <div className="flex items-center gap-5 flex-1">
+                            <div className="w-14 h-14 bg-red-500/10 rounded-2xl flex items-center justify-center font-black text-red-500 text-lg border border-red-500/20">
+                              {v.full_name[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-black uppercase text-white tracking-tight">{v.full_name}</h4>
+                              <p className="text-[9px] font-black text-red-400 uppercase tracking-widest italic">Ingresó {new Date(v.entry_at || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                                     <button 
-                                         onClick={() => handleStatusUpdate(v.id, 'completed', (v as any).invitations?.id)}
-                                         className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-red-500/10 transition-all flex items-center gap-2 active:scale-95"
-                                     >
-                                         <LogOut className="w-4 h-4" />
-                                         Confirmar Salida
-                                     </button>
-                                 </div>
-                      </div>
-                    ))}
+                          <button onClick={() => handleStatusUpdate(v.id, 'completed', (v as any).invitations?.id)}
+                            className="h-10 px-6 bg-white/5 text-red-500 hover:bg-red-500 hover:text-white rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border border-red-500/20 active:scale-95 shadow-lg shadow-red-900/10">
+                            Confirmar Salida
+                          </button>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </div>
                 ) : (
-                  <div className="py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
-                      <LogOutIcon className="w-12 h-12 text-slate-300 mb-4" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay visitas activas dentro del barrio</p>
+                  <div className="py-20 luxury-card bg-slate-900/20 border-dashed border border-white/10 flex flex-col items-center justify-center text-center">
+                    <LogOutIcon className="w-12 h-12 mb-4 text-slate-700" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 italic">No hay visitas activas en el barrio</p>
                   </div>
                 )}
             </div>
+          </div>
         )}
 
         {activeTab === 'registros' && (
-            <div className="space-y-4">
-                <div className="flex items-center gap-3 mb-6 ml-4">
-                    <ShieldPlus className="w-5 h-5 text-amber-600" />
-                    <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Auditoría de Identidad ({pendingVisitors.length + pendingOwners.length})</h3>
-                </div>
-                
-                {(pendingVisitors.length + pendingOwners.length) > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {pendingOwners.map(v => (
-                        <div key={v.id} className="bg-white border border-slate-200 p-6 rounded-[2.5rem] flex items-center justify-between group hover:border-emerald-500 shadow-sm transition-all hover:shadow-xl hover:shadow-emerald-500/10">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform">
-                                    <Home className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h4 className="font-black uppercase text-slate-900 group-hover:text-emerald-600 transition-colors">{v.full_name}</h4>
-                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">NUEVO VECINO • LOTE {v.lote}</p>
-                                </div>
-                            </div>
-                            <button 
-                              onClick={() => setViewingAuth({ 
-                                ...v, 
-                                isOwner: true,
-                                id: v.id // ID Explícito
-                              })}
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95"
-                            >
-                                AUDITAR
-                            </button>
-                        </div>
-                    ))}
-
-                    {pendingVisitors.map(v => (
-                        <div key={v.id} className="bg-white border border-slate-200 p-6 rounded-[2.5rem] flex items-center justify-between group hover:border-blue-500 shadow-sm transition-all hover:shadow-xl hover:shadow-blue-500/10">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform">
-                                    <ShieldAlert className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h4 className="font-black uppercase text-slate-900 group-hover:text-blue-600 transition-colors">{v.full_name}</h4>
-                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">VISITA • LOTE {v.invitations?.profiles?.lote}</p>
-                                </div>
-                            </div>
-                            <button 
-                              onClick={() => setViewingAuth({ 
-                                ...v, 
-                                isOwner: false,
-                                id: v.id // ID Explícito
-                              })}
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95"
-                            >
-                                AUDITAR
-                            </button>
-                        </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
-                      <ShieldCheck className="w-12 h-12 text-slate-300 mb-4" />
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay registros pendientes de revisión</p>
-                  </div>
-                )}
+          <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="flex items-center gap-4 ml-2">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.4em]">Auditoría de Identidad ({pendingVisitors.length + pendingOwners.length})</h3>
             </div>
+            
+            {(pendingVisitors.length + pendingOwners.length) > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <AnimatePresence mode="popLayout">
+                  {pendingOwners.map((v, idx) => (
+                    <motion.div key={v.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.05 }} layout
+                      className="luxury-card p-6 flex items-center justify-between gap-6 group hover:border-[#10b981]/50 shadow-xl shadow-black/[0.02] transition-all">
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-[#064e3b]">
+                          <Home className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black uppercase text-slate-800 tracking-tight">{v.full_name}</h4>
+                          <p className="text-[9px] font-black text-[#10b981] uppercase tracking-widest">NUEVO VECINO • LOTE {v.lote}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setViewingAuth({ ...v, isOwner: true, id: v.id })}
+                        className="h-12 px-8 bg-[#064e3b] text-white rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-[#064e3b]/10 hover:bg-black transition-all">
+                        AUDITAR
+                      </button>
+                    </motion.div>
+                  ))}
+
+                  {pendingVisitors.map((v, idx) => (
+                    <motion.div key={v.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: (idx + pendingOwners.length) * 0.05 }} layout
+                      className="luxury-card p-6 flex items-center justify-between gap-6 group hover:border-blue-200 shadow-xl shadow-black/[0.02] transition-all">
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                          <ShieldAlert className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black uppercase text-slate-800 tracking-tight">{v.full_name}</h4>
+                          <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">VISITA • LOTE {v.invitations?.profiles?.lote}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setViewingAuth({ ...v, isOwner: false, id: v.id })}
+                        className="h-12 px-8 bg-[#064e3b] text-white rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-[#064e3b]/10 hover:bg-black transition-all">
+                        AUDITAR
+                      </button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div className="py-20 luxury-card bg-white border-dashed border-2 flex flex-col items-center justify-center text-center opacity-40">
+                <ShieldCheck className="w-12 h-12 mb-4 text-slate-300" />
+                <p className="text-[10px] font-black uppercase tracking-widest italic">No hay registros pendientes de revisión</p>
+              </div>
+            )}
+          </div>
         )}
 
 
@@ -1740,567 +1768,429 @@ export default function GuardiaPortal() {
 
 
         {activeTab === 'config' && (
-            <div className="max-w-xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="bg-white border border-slate-200 p-10 rounded-[3rem] shadow-xl shadow-slate-200/50">
-                    <div className="flex items-center gap-4 mb-10">
-                        <div className="p-4 bg-emerald-50 rounded-2xl text-emerald-600 shadow-inner">
-                            <Lock className="w-8 h-8" />
-                        </div>
-                        <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Seguridad</h3>
-                            <p className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">Actualiza la clave de acceso de la guardia</p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Nueva Contraseña</label>
-                            <input 
-                                type="password" 
-                                placeholder="••••••••" 
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black tracking-widest text-slate-900 focus:border-emerald-500/50 focus:outline-none transition-all shadow-inner"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Confirmar Nueva Contraseña</label>
-                            <input 
-                                type="password" 
-                                placeholder="••••••••" 
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black tracking-widest text-slate-900 focus:border-emerald-500/50 focus:outline-none transition-all shadow-inner"
-                            />
-                        </div>
-
-                        <button 
-                            onClick={handleUpdateGuardPassword}
-                            disabled={isUpdatingPassword}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-4"
-                        >
-                            {isUpdatingPassword ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5 text-white" /> Guardar Clave</>}
-                        </button>
-                    </div>
+          <div className="max-w-xl mx-auto space-y-12 animate-in fade-in duration-700 mt-8">
+            <div className="luxury-card p-10 bg-white relative overflow-hidden">
+              <div className="flex items-center gap-5 mb-10">
+                <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-[#064e3b]">
+                  <Lock className="w-6 h-6" />
                 </div>
-
-                <div className="bg-white border border-slate-200 p-10 rounded-[3rem] shadow-xl shadow-slate-200/50">
-                    <div className="flex items-center gap-4 mb-10">
-                        <div className="p-4 bg-emerald-50 rounded-2xl text-emerald-600 shadow-inner">
-                            <Users className="w-8 h-8" />
-                        </div>
-                        <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Usuario</h3>
-                            <p className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">Actualiza el usuario de acceso de la guardia</p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Nuevo Usuario</label>
-                            <input 
-                                type="text" 
-                                placeholder="GUARDIA PRINCIPAL" 
-                                value={newGuardUsername}
-                                onChange={(e) => setNewGuardUsername(e.target.value.toUpperCase())}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 focus:outline-none transition-all shadow-inner"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Confirmar Nuevo Usuario</label>
-                            <input 
-                                type="text" 
-                                placeholder="GUARDIA PRINCIPAL" 
-                                value={confirmGuardUsername}
-                                onChange={(e) => setConfirmGuardUsername(e.target.value.toUpperCase())}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 focus:outline-none transition-all shadow-inner"
-                            />
-                        </div>
-
-                        <button 
-                            onClick={handleUpdateGuardName}
-                            disabled={isUpdatingName}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/10 transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-4"
-                        >
-                            {isUpdatingName ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5 text-white" /> Guardar Usuario</>}
-                        </button>
-                    </div>
+                <div>
+                  <h3 className="text-xl font-black text-[#064e3b] uppercase tracking-tighter">Seguridad</h3>
+                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Credenciales de acceso</p>
                 </div>
+              </div>
+
+              <div className="space-y-6">
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Nueva Contraseña</label>
+                    <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••"
+                      className="w-full h-14 luxury-input px-6 rounded-2xl text-xs font-black" />
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Confirmar Contraseña</label>
+                    <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••"
+                      className="w-full h-14 luxury-input px-6 rounded-2xl text-xs font-black" />
+                 </div>
+                 <button onClick={handleUpdateGuardPassword} disabled={isUpdatingPassword}
+                   className="w-full h-16 bg-[#064e3b] text-white rounded-2xl font-black text-[10px] uppercase shadow-xl hover:bg-black transition-all">
+                   {isUpdatingPassword ? "..." : "Guardar Clave"}
+                 </button>
+              </div>
             </div>
+
+            <div className="luxury-card p-10 bg-white relative overflow-hidden">
+              <div className="flex items-center gap-5 mb-10">
+                <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-[#064e3b]">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[#064e3b] uppercase tracking-tighter">Perfil</h3>
+                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Identificación de Terminal</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Nuevo Identificador</label>
+                    <input type="text" value={newGuardUsername} onChange={e => setNewGuardUsername(e.target.value.toUpperCase())} placeholder="GUARDIA PRINCIPAL"
+                      className="w-full h-14 luxury-input px-6 rounded-2xl text-xs font-black" />
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Confirmar Identificador</label>
+                    <input type="text" value={confirmGuardUsername} onChange={e => setConfirmGuardUsername(e.target.value.toUpperCase())} placeholder="GUARDIA PRINCIPAL"
+                      className="w-full h-14 luxury-input px-6 rounded-2xl text-xs font-black" />
+                 </div>
+                 <button onClick={handleUpdateGuardName} disabled={isUpdatingName}
+                   className="w-full h-16 bg-[#064e3b] text-white rounded-2xl font-black text-[10px] uppercase shadow-xl hover:bg-black transition-all">
+                   {isUpdatingName ? "..." : "Guardar Perfil"}
+                 </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {activeTab === 'identidades' && (
-            <div className="space-y-8">
-                <div className="flex items-center justify-between mb-2 px-4">
-                  <h2 className="text-slate-900 font-extrabold uppercase tracking-widest text-xs">Identidades</h2>
-                  <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 shadow-sm">Build v6.5</span>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl shadow-slate-200/50">
-
-                    <div className="p-8 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <UserCheck className="w-6 h-6 text-emerald-600" />
-                            <h3 className="font-black uppercase tracking-widest text-slate-900 text-sm">Banco de Identidades ({approvedVisitors.length})</h3>
-                        </div>
-                        
-                        <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input 
-                                type="text"
-                                placeholder="BUSCAR POR NOMBRE O DNI..."
-                                value={identidadesSearch}
-                                onChange={(e) => setIdentidadesSearch(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="p-6">
-                        <button 
-                            onClick={() => setIsAddingVisitor(true)}
-                            className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/10 hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 mb-6 active:scale-95"
-                        >
-                            <UserPlus className="w-5 h-5" />
-                            Nuevo Visitante Permanente
-                        </button>
-
-                        <div className="grid grid-cols-1 gap-2">
-                            {approvedVisitors.filter(v => 
-                                v.full_name?.toLowerCase().includes(identidadesSearch.toLowerCase()) || 
-                                v.dni?.includes(identidadesSearch)
-                            ).length > 0 ? (
-                                approvedVisitors.filter(v => 
-                                    v.full_name?.toLowerCase().includes(identidadesSearch.toLowerCase()) || 
-                                    v.dni?.includes(identidadesSearch)
-                                ).map(v => (
-                                    <div key={v.dni} className="bg-white border border-slate-100 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 group hover:border-emerald-500/20 transition-all shadow-sm">
-                                        <div className="flex items-center gap-4">
-                                            <div className="min-w-0">
-                                                <h4 className="font-black uppercase text-xs text-slate-900 tracking-tight group-hover:text-emerald-700 transition-colors truncate">{v.full_name}</h4>
-                                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">DNI {v.dni}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button 
-                                                onClick={() => setManualEntryVisitor(v)}
-                                                className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
-                                            >
-                                                INGRESAR
-                                            </button>
-                                            <button 
-                                                onClick={() => {
-                                                    setViewingAuth(v);
-                                                    fetchVisitorHistory(v.dni);
-                                                }}
-                                                className="bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-sm"
-                                            >
-                                                Audit
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDeleteVisitor(v.dni)}
-                                                className="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white p-3 rounded-xl transition-all border border-red-100"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
-                                    <Users className="w-12 h-12 text-slate-300 mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay identidades que coincidan</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+          <div className="space-y-10 animate-in fade-in duration-700">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-[#064e3b] uppercase tracking-tighter">Identidades</h3>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                   <UserCheck className="w-3 h-3" /> Banco Maestro ({approvedVisitors.length})
+                </p>
+              </div>
+              <div className="w-full md:w-80 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input type="text" value={identidadesSearch} onChange={e => setIdentidadesSearch(e.target.value)} placeholder="Filtrar DNI o Nombre..."
+                  className="w-full h-14 luxury-input pl-12 pr-4 rounded-2xl text-[10px] font-black uppercase" />
+              </div>
             </div>
+
+            <button onClick={() => setIsAddingVisitor(true)}
+              className="w-full h-20 bg-white luxury-card rounded-[2rem] font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-4 hover:border-emerald-500 transition-all group">
+              <UserPlus className="w-5 h-5 text-[#064e3b] group-hover:scale-110 transition-transform" /> 
+              Registrar Identidad Maestra
+            </button>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <AnimatePresence mode="popLayout">
+                {approvedVisitors.filter(v => 
+                    v.full_name?.toLowerCase().includes(identidadesSearch.toLowerCase()) || 
+                    v.dni?.includes(identidadesSearch)
+                ).map((v, idx) => (
+                  <motion.div key={v.dni} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }} layout
+                    className="luxury-card p-6 flex flex-col gap-6 group hover:border-emerald-200 transition-colors">
+                     <div className="flex items-center gap-5">
+                       <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center font-black text-[#064e3b] text-lg">
+                         {v.full_name[0].toUpperCase()}
+                       </div>
+                       <div className="min-w-0">
+                         <h4 className="text-xs font-black uppercase text-slate-800 tracking-tight truncate">{v.full_name}</h4>
+                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">DNI {v.dni}</p>
+                       </div>
+                     </div>
+                     <div className="flex gap-2">
+                       <button onClick={() => setManualEntryVisitor(v)}
+                         className="flex-1 h-12 bg-[#064e3b] text-white rounded-xl text-[8px] font-black uppercase tracking-widest shadow-lg shadow-[#064e3b]/10 hover:bg-black transition-all">
+                         INGRESAR
+                       </button>
+                       <button onClick={() => { setViewingAuth(v); fetchVisitorHistory(v.dni); }}
+                         className="w-12 h-12 flex items-center justify-center bg-slate-50 text-slate-400 hover:bg-[#064e3b] hover:text-white rounded-xl transition-all">
+                         <Search className="w-4 h-4" />
+                       </button>
+                       <button onClick={() => handleDeleteVisitor(v.dni)}
+                         className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-300 hover:bg-red-600 hover:text-white rounded-xl transition-all">
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                     </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
         )}
 
         {activeTab === 'trabajadores' && (
-            <div className="space-y-8">
-                <div className="flex items-center justify-between mb-2 px-4">
-                  <h2 className="text-slate-900 font-extrabold uppercase tracking-widest text-xs">Trabajadores</h2>
-                  <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 shadow-sm">Build v6.5</span>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl shadow-slate-200/50">
-
-                    <div className="p-8 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <Briefcase className="w-6 h-6 text-emerald-600" />
-                            <h3 className="font-black uppercase tracking-widest text-slate-900 text-sm">Personal Permanente ({trabajadores.length})</h3>
-                        </div>
-                        
-                        <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input 
-                                type="text"
-                                placeholder="BUSCAR TRABAJADOR..."
-                                value={trabajadoresSearch}
-                                onChange={(e) => setTrabajadoresSearch(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="p-6">
-                        <button 
-                            onClick={() => setIsAddingTrabajador(true)}
-                            className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/10 hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 mb-6 active:scale-95"
-                        >
-                            <UserPlus className="w-5 h-5" />
-                            Agregar Nuevo Trabajador
-                        </button>
-
-                        <div className="grid grid-cols-1 gap-2">
-                            {trabajadores.filter(v => 
-                                v.full_name?.toLowerCase().includes(trabajadoresSearch.toLowerCase()) || 
-                                v.dni?.includes(trabajadoresSearch)
-                            ).length > 0 ? (
-                                trabajadores.filter(v => 
-                                    v.full_name?.toLowerCase().includes(trabajadoresSearch.toLowerCase()) || 
-                                    v.dni?.includes(trabajadoresSearch)
-                                ).map(v => (
-                                    <div key={v.dni} className={`p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 group transition-all border ${v.status === 'blocked' ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100 shadow-sm hover:border-emerald-500/30 hover:shadow-lg'}`}>
-                                        <div className="flex items-center gap-4">
-                                            <div className="min-w-0">
-                                                <h4 className={`font-black uppercase text-xs tracking-tight transition-colors truncate ${v.status === 'blocked' ? 'text-red-600 font-extrabold' : 'text-slate-900 group-hover:text-emerald-700'}`}>{v.full_name}</h4>
-                                                <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-widest leading-none mt-1">
-                                                    DNI {v.dni} • {v.category || 'SIN CATEGORÍA'} {v.employer ? `• AUTORIZADO POR: ${v.employer}` : ''}
-                                                </p>
-                                                {(v.start_date || v.end_date) && (
-                                                  <p className="text-[8px] text-emerald-600 font-black uppercase tracking-widest mt-1">
-                                                    VIGENCIA: {v.start_date ? new Date(v.start_date).toLocaleDateString() : '---'} AL {v.end_date ? new Date(v.end_date).toLocaleDateString() : '---'}
-                                                  </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {v.status !== 'blocked' && (
-                                                <button 
-                                                    onClick={() => setManualEntryVisitor({ ...v, role: 'worker' })}
-                                                    className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
-                                                >
-                                                    INGRESAR
-                                                </button>
-                                            )}
-                                            <button 
-                                                onClick={() => toggleBlockTrabajador(v.id, v.status)}
-                                                className={`px-4 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-sm ${v.status === 'blocked' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}
-                                            >
-                                                {v.status === 'blocked' ? 'Habilitar' : 'Bloquear'}
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDeleteTrabajador(v.id)}
-                                                className="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white p-3 rounded-xl transition-all border border-red-100"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
-                                    <Briefcase className="w-12 h-12 text-slate-300 mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay trabajadores en esa búsqueda</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+          <div className="space-y-10 animate-in fade-in duration-700">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-[#064e3b] uppercase tracking-tighter">Trabajadores</h3>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                   <Briefcase className="w-3 h-3" /> Personal Permanente ({trabajadores.length})
+                </p>
+              </div>
+              <div className="w-full md:w-80 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input type="text" value={trabajadoresSearch} onChange={e => setTrabajadoresSearch(e.target.value)} placeholder="Buscar trabajador..."
+                  className="w-full h-14 luxury-input pl-12 pr-4 rounded-2xl text-[10px] font-black uppercase" />
+              </div>
             </div>
+
+            <button onClick={() => setIsAddingTrabajador(true)}
+              className="w-full h-20 bg-white luxury-card rounded-[2rem] font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-4 hover:border-emerald-500 transition-all group">
+              <UserPlus className="w-5 h-5 text-[#064e3b] group-hover:scale-110 transition-transform" /> 
+              Registrar Nuevo Trabajador
+            </button>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <AnimatePresence mode="popLayout">
+                {trabajadores.filter(v => 
+                    v.full_name?.toLowerCase().includes(trabajadoresSearch.toLowerCase()) || 
+                    v.dni?.includes(trabajadoresSearch)
+                ).map((v, idx) => (
+                  <motion.div key={v.dni} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.05 }} layout
+                    className={`luxury-card p-6 flex flex-col gap-6 group transition-all ${v.status === 'blocked' ? 'opacity-60 bg-red-50/30' : 'hover:border-emerald-200'}`}>
+                     <div className="flex items-center gap-5">
+                       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg ${v.status === 'blocked' ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-[#064e3b]'}`}>
+                         {v.full_name[0].toUpperCase()}
+                       </div>
+                       <div className="min-w-0">
+                         <h4 className={`text-xs font-black uppercase tracking-tight truncate ${v.status === 'blocked' ? 'text-red-600' : 'text-slate-800'}`}>{v.full_name}</h4>
+                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">DNI {v.dni} • {v.category || 'EXTERNO'}</p>
+                       </div>
+                     </div>
+
+                     {v.status === 'blocked' && (
+                       <div className="bg-red-50 px-4 py-2 rounded-lg border border-red-100 flex items-center gap-2">
+                         <ShieldAlert className="w-3 h-3 text-red-600" />
+                         <span className="text-[7px] font-black text-red-600 uppercase tracking-widest">Acceso Bloqueado</span>
+                       </div>
+                     )}
+
+                     <div className="flex gap-2">
+                       {v.status !== 'blocked' && (
+                         <button onClick={() => setManualEntryVisitor({ ...v, role: 'worker' })}
+                           className="flex-1 h-12 bg-[#064e3b] text-white rounded-xl text-[8px] font-black uppercase tracking-widest shadow-lg hover:bg-black transition-all">
+                           INGRESAR
+                         </button>
+                       )}
+                       <button onClick={() => toggleBlockTrabajador(v.id, v.status)}
+                         className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all border ${v.status === 'blocked' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white' : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-600 hover:text-white'}`}>
+                         <Lock className="w-4 h-4" />
+                       </button>
+                       <button onClick={() => handleDeleteTrabajador(v.id)}
+                         className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-300 hover:bg-red-600 hover:text-white rounded-xl transition-all">
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                     </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
         )}
 
         {activeTab === 'permanentes' && (
-            <div className="space-y-8">
-                <div className="flex items-center justify-between mb-2 px-4">
-                  <h2 className="text-slate-900 font-extrabold uppercase tracking-widest text-xs">Permanentes</h2>
-                  <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 shadow-sm">Build v6.5</span>
-                </div>
-                <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl shadow-slate-200/50">
-
-                    <div className="p-8 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <ShieldCheck className="w-6 h-6 text-emerald-600" />
-                            <h3 className="font-black uppercase tracking-widest text-slate-900 text-sm">Accesos Fijos ({permanentes.length})</h3>
-                        </div>
-                        
-                        <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input 
-                                type="text"
-                                placeholder="BUSCAR PERMANENTE..."
-                                value={permanentesSearch}
-                                onChange={(e) => setPermanentesSearch(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="p-6">
-                        <button 
-                            onClick={() => setIsAddingPermanente(true)}
-                            className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/10 hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 mb-6 active:scale-95"
-                        >
-                            <UserPlus className="w-5 h-5" />
-                            Agregar Nuevo Permanente
-                        </button>
-
-                        <div className="grid grid-cols-1 gap-2">
-                            {permanentes.filter(v => 
-                                v.full_name?.toLowerCase().includes(permanentesSearch.toLowerCase()) || 
-                                v.dni?.includes(permanentesSearch)
-                            ).length > 0 ? (
-                                permanentes.filter(v => 
-                                    v.full_name?.toLowerCase().includes(permanentesSearch.toLowerCase()) || 
-                                    v.dni?.includes(permanentesSearch)
-                                ).map(v => (
-                                    <div key={v.dni} className={`p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 group transition-all border ${v.status === 'blocked' ? 'bg-red-50 border-red-200 shadow-inner' : 'bg-white border-slate-100 shadow-sm hover:border-emerald-500/30 hover:shadow-lg'}`}>
-                                        <div className="flex items-center gap-4">
-                                            <div className="min-w-0">
-                                                <h4 className={`font-black uppercase text-xs tracking-tighter transition-colors truncate ${v.status === 'blocked' ? 'text-red-600 font-extrabold' : 'text-slate-900 group-hover:text-emerald-700'}`}>{v.full_name}</h4>
-                                                <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest leading-none mt-1">
-                                                    DNI {v.dni} • {v.category || 'PERMANENTE'} {v.employer ? `• AUTORIZADO POR: ${v.employer}` : ''}
-                                                </p>
-                                                {(v.start_date || v.end_date) && (
-                                                  <p className="text-[8px] text-emerald-600 font-black uppercase tracking-widest mt-1">
-                                                    VIGENCIA: {v.start_date ? new Date(v.start_date).toLocaleDateString() : '---'} AL {v.end_date ? new Date(v.end_date).toLocaleDateString() : '---'}
-                                                  </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {v.status !== 'blocked' && (
-                                                <button 
-                                                    onClick={() => setManualEntryVisitor({ ...v, role: 'worker' })}
-                                                    className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
-                                                >
-                                                    INGRESAR
-                                                </button>
-                                            )}
-                                            <button 
-                                                onClick={() => toggleBlockPermanente(v.id, v.status)}
-                                                className={`px-4 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-sm ${v.status === 'blocked' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}
-                                            >
-                                                {v.status === 'blocked' ? 'Habilitar' : 'Bloquear'}
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDeletePermanente(v.id)}
-                                                className="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white p-3 rounded-xl transition-all border border-red-100"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center shadow-inner">
-                                    <ShieldCheck className="w-12 h-12 text-slate-300 mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No hay permanentes en esa búsqueda</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+          <div className="space-y-10 animate-in fade-in duration-700">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-[#064e3b] uppercase tracking-tighter">Permanentes</h3>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                   <ShieldCheck className="w-3 h-3" /> Accesos Fijos ({permanentes.length})
+                </p>
+              </div>
+              <div className="w-full md:w-80 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input type="text" value={permanentesSearch} onChange={e => setPermanentesSearch(e.target.value)} placeholder="Buscar permanente..."
+                  className="w-full h-14 luxury-input pl-12 pr-4 rounded-2xl text-[10px] font-black uppercase" />
+              </div>
             </div>
+
+            <button onClick={() => setIsAddingPermanente(true)}
+              className="w-full h-20 bg-white luxury-card rounded-[2rem] font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-4 hover:border-emerald-500 transition-all group">
+              <UserPlus className="w-5 h-5 text-[#064e3b] group-hover:scale-110 transition-transform" /> 
+              Registrar Nuevo Permanente
+            </button>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <AnimatePresence mode="popLayout">
+                {permanentes.filter(v => 
+                    v.full_name?.toLowerCase().includes(permanentesSearch.toLowerCase()) || 
+                    v.dni?.includes(permanentesSearch)
+                ).map((v, idx) => (
+                  <motion.div key={v.dni} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.05 }} layout
+                    className={`luxury-card p-6 flex flex-col gap-6 group transition-all ${v.status === 'blocked' ? 'opacity-60 bg-red-50/30' : 'hover:border-emerald-200'}`}>
+                     <div className="flex items-center gap-5">
+                       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg ${v.status === 'blocked' ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-[#064e3b]'}`}>
+                         {v.full_name[0].toUpperCase()}
+                       </div>
+                       <div className="min-w-0">
+                         <h4 className={`text-xs font-black uppercase tracking-tight truncate ${v.status === 'blocked' ? 'text-red-600' : 'text-slate-800'}`}>{v.full_name}</h4>
+                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">DNI {v.dni} • {v.category || 'PERMANENTE'}</p>
+                       </div>
+                     </div>
+
+                     {v.status === 'blocked' && (
+                       <div className="bg-red-50 px-4 py-2 rounded-lg border border-red-100 flex items-center gap-2">
+                         <ShieldAlert className="w-3 h-3 text-red-600" />
+                         <span className="text-[7px] font-black text-red-600 uppercase tracking-widest">Acceso Bloqueado</span>
+                       </div>
+                     )}
+
+                     <div className="flex gap-2">
+                       {v.status !== 'blocked' && (
+                         <button onClick={() => setManualEntryVisitor({ ...v, role: 'worker' })}
+                           className="flex-1 h-12 bg-[#064e3b] text-white rounded-xl text-[8px] font-black uppercase tracking-widest shadow-lg hover:bg-black transition-all">
+                           INGRESAR
+                         </button>
+                       )}
+                       <button onClick={() => toggleBlockPermanente(v.id, v.status)}
+                         className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all border ${v.status === 'blocked' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white' : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-600 hover:text-white'}`}>
+                         <Lock className="w-4 h-4" />
+                       </button>
+                       <button onClick={() => handleDeletePermanente(v.id)}
+                         className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-300 hover:bg-red-600 hover:text-white rounded-xl transition-all">
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                     </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
         )}
 
         {activeTab === 'propietarios' && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl shadow-slate-200/50">
-                    <div className="p-8 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <Building2 className="w-6 h-6 text-emerald-600" />
-                            <h3 className="font-black uppercase tracking-widest text-slate-900 text-sm">Vecinos Activos ({allOwners.length})</h3>
-                        </div>
-                        
-                        <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <input 
-                                type="text"
-                                placeholder="BUSCAR POR NOMBRE O LOTE..."
-                                value={ownerSearch}
-                                onChange={(e) => setOwnerSearch(e.target.value.toUpperCase())}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 divide-y divide-slate-100">
-                        {allOwners.filter(owner => 
-                            owner.full_name?.toLowerCase().includes(ownerSearch.toLowerCase()) || 
-                            owner.lote?.toString().includes(ownerSearch)
-                        ).length > 0 ? (
-                            allOwners.filter(owner => 
-                                owner.full_name?.toLowerCase().includes(ownerSearch.toLowerCase()) || 
-                                owner.lote?.toString().includes(ownerSearch)
-                            ).map((owner) => (
-                                <div key={owner.id} className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-slate-100 border border-slate-200 rounded-2xl flex items-center justify-center font-black text-emerald-600 shadow-sm">{owner.lote}</div>
-                                        <div>
-                                            <h4 className="font-extrabold uppercase text-slate-900 group-hover:text-emerald-700 transition-colors">{owner.full_name}</h4>
-                                            <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest">{owner.email || 'SIN EMAIL'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${owner.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>{owner.status === 'active' ? 'ACTIVO' : 'BLOQUEADO'}</span>
-                                        <button onClick={() => handleBlockOwner(owner.id, owner.status)} className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all text-slate-400 hover:text-slate-600"><Lock className="w-4 h-4" /></button>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="p-20 text-center text-[10px] font-black uppercase text-slate-400 italic tracking-[0.3em]">
-                                No se encontraron vecinos con esa búsqueda
-                            </div>
-                        )}
-                    </div>
-                </div>
+          <div className="space-y-10 animate-in fade-in duration-700">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-[#064e3b] uppercase tracking-tighter">Vecinos</h3>
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                   <Building2 className="w-3 h-3" /> Residentes Activos ({allOwners.length})
+                </p>
+              </div>
+              <div className="w-full md:w-80 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input type="text" value={ownerSearch} onChange={e => setOwnerSearch(e.target.value.toUpperCase())} placeholder="Buscar por Lote o Nombre..."
+                  className="w-full h-14 luxury-input pl-12 pr-4 rounded-2xl text-[10px] font-black uppercase" />
+              </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence mode="popLayout">
+                {allOwners.filter(owner => 
+                    owner.full_name?.toLowerCase().includes(ownerSearch.toLowerCase()) || 
+                    owner.lote?.toString().includes(ownerSearch)
+                ).map((owner, idx) => (
+                  <motion.div key={owner.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.05 }} layout
+                    className="luxury-card p-6 flex items-center justify-between gap-6 group hover:border-[#10b981]/50 transition-all">
+                    <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center font-black text-[#064e3b] text-lg shadow-sm">
+                        {owner.lote}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-black uppercase text-slate-800 tracking-tight truncate">{owner.full_name}</h4>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest truncate">{owner.email || 'SIN EMAIL'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`px-3 py-1.5 rounded-lg text-[7px] font-black uppercase tracking-widest ${owner.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                        {owner.status === 'active' ? 'ACTIVO' : 'BLOCK'}
+                      </div>
+                      <button onClick={() => handleBlockOwner(owner.id, owner.status)} 
+                        className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-[#064e3b] hover:border-[#064e3b] transition-all">
+                        <Lock className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
         )}
 
         {activeTab === 'historial' && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 ml-4">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-3">
-                            <History className="w-5 h-5 text-emerald-600" />
-                            <h3 className="text-sm font-extrabold uppercase tracking-widest text-slate-400">Historial de Auditoría (90 días)</h3>
-                        </div>
-                        <button 
-                            onClick={handleClearHistory}
-                            className="bg-red-50 hover:bg-red-600 text-red-600 hover:text-white px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 border border-red-100 shadow-sm"
-                        >
-                            <Trash2 className="w-3 h-3" />
-                            Limpiar Historial Finalizado
-                        </button>
-                    </div>
-                    
-                    <div className="relative w-full sm:w-80">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input 
-                            type="text"
-                            placeholder="BUSCAR POR NOMBRE, DNI O LOTE..."
-                            value={historySearch}
-                            onChange={(e) => setHistorySearch(e.target.value.toUpperCase())}
-                            className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
-                        />
-                    </div>
+          <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="flex flex-col md:flex-row justify-between items-end gap-6 px-2">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-[#064e3b] uppercase tracking-tighter">Historial</h3>
+                <div className="flex items-center gap-4">
+                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Últimos 90 días</p>
+                  <button onClick={handleClearHistory}
+                    className="flex items-center gap-2 text-red-400 hover:text-red-600 text-[8px] font-black uppercase tracking-widest transition-colors">
+                    <Trash2 className="w-3 h-3" /> Limpiar registros
+                  </button>
                 </div>
-
-                <div className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-xl shadow-slate-200/50">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100">
-                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Visitante</th>
-                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Documento</th>
-                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Lote</th>
-                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Fecha</th>
-                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Entrada</th>
-                                    <th className="p-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Salida</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {historyRecords.filter(r => 
-                                    r.full_name?.toLowerCase().includes(historySearch.toLowerCase()) || 
-                                    r.dni?.includes(historySearch) ||
-                                    r.invitations?.profiles?.lote?.toString().includes(historySearch)
-                                ).length > 0 ? historyRecords.filter(r => 
-                                    r.full_name?.toLowerCase().includes(historySearch.toLowerCase()) || 
-                                    r.dni?.includes(historySearch) ||
-                                    r.invitations?.profiles?.lote?.toString().includes(historySearch)
-                                ).map(r => (
-                                    <tr key={r.id} className="hover:bg-slate-50/50 transition-colors group">
-                                        <td className="p-5 font-extrabold uppercase text-xs text-slate-900">
-                                            <div className="flex items-center gap-3">
-                                                {r.full_name}
-                                                <button 
-                                                    onClick={() => handleDeleteHistoryRecord(r.id, r.dni)}
-                                                    className="opacity-0 group-hover:opacity-100 p-1.5 bg-red-50 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all border border-red-100"
-                                                    title="Eliminar Registro"
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                        <td className="p-5 font-extrabold text-[10px] text-slate-500">DNI {r.dni}</td>
-                                        <td className="p-5 font-black text-[10px] text-emerald-600">LOTE {r.invitations?.profiles?.lote || '--'}</td>
-                                        <td className="p-5 text-[10px] text-slate-500 font-extrabold">{r.updated_at ? new Date(r.updated_at).toLocaleDateString('es-AR') : '--'}</td>
-                                        <td className="p-5 text-[10px] text-emerald-600 font-black">
-                                            {r.entry_at ? new Date(r.entry_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
-                                        </td>
-                                        <td className="p-5 text-[10px] text-red-500 font-black">
-                                            {r.exit_at ? new Date(r.exit_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr>
-                                        <td colSpan={6} className="p-20 text-center text-[10px] font-black uppercase text-slate-300 italic tracking-[0.3em]">
-                                            No hay registros que coincidan con la búsqueda
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+              </div>
+              <div className="w-full md:w-80 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <input type="text" value={historySearch} onChange={e => setHistorySearch(e.target.value.toUpperCase())} placeholder="Buscar registro..."
+                  className="w-full h-14 luxury-input pl-12 pr-4 rounded-2xl text-[10px] font-black uppercase" />
+              </div>
             </div>
+
+            <div className="luxury-card overflow-hidden bg-slate-900/40 border border-white/5 backdrop-blur-md">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-white/5 bg-white/5">
+                      {['Visitante', 'Documento', 'Lote', 'Fecha', 'Entrada', 'Salida'].map(h => (
+                        <th key={h} className="p-6 text-[8px] font-black uppercase text-slate-500 tracking-[0.2em]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {historyRecords.filter(r => 
+                      r.full_name?.toLowerCase().includes(historySearch.toLowerCase()) || r.dni?.includes(historySearch) || r.invitations?.profiles?.lote?.toString().includes(historySearch)
+                    ).map((r, idx) => (
+                      <tr key={r.id} className="group hover:bg-white/5 transition-colors">
+                        <td className="p-6">
+                           <div className="flex items-center gap-3">
+                             <span className="text-xs font-black uppercase text-white">{r.full_name}</span>
+                             <button onClick={() => handleDeleteHistoryRecord(r.id, r.dni)} className="opacity-0 group-hover:opacity-100 text-red-400/50 hover:text-red-500 transition-all">
+                               <Trash2 className="w-3 h-3" />
+                             </button>
+                           </div>
+                        </td>
+                        <td className="p-6"><span className="text-[10px] font-black text-slate-500 uppercase">DNI {r.dni}</span></td>
+                        <td className="p-6"><span className="text-[10px] font-black text-emerald-500 uppercase">Lote {r.invitations?.profiles?.lote || '--'}</span></td>
+                        <td className="p-6"><span className="text-[10px] font-black text-slate-600 uppercase">{r.updated_at ? new Date(r.updated_at).toLocaleDateString() : '--'}</span></td>
+                        <td className="p-6"><span className="text-[10px] font-black text-emerald-400 uppercase">{r.entry_at ? new Date(r.entry_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--'}</span></td>
+                        <td className="p-6"><span className="text-[10px] font-black text-red-400 uppercase">{r.exit_at ? new Date(r.exit_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '--'}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         )}
 
         {viewingAuth && (
-            <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300 overflow-y-auto">
-                <div className="bg-white w-full max-w-4xl border border-slate-200 rounded-[3rem] shadow-2xl overflow-hidden my-8">
-                    <div className="p-8 border-b border-slate-100 flex items-center justify-between">
-                        <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">{viewingAuth.full_name}</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Auditoría de Identidad • DNI {viewingAuth.dni}</p>
+            <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    className="bg-slate-950 w-full max-w-5xl luxury-card overflow-hidden my-8 max-h-[90vh] flex flex-col shadow-2xl relative border border-white/10">
+                    
+                    <div className="p-8 border-b border-white/5 flex items-center justify-between bg-slate-900">
+                        <div className="space-y-1">
+                            <h3 className="text-3xl font-black uppercase tracking-tighter text-white italic">{viewingAuth.full_name}</h3>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Terminal de Auditoría • ID {viewingAuth.dni}</p>
                         </div>
-                        <button onClick={() => { setViewingAuth(null); setVisitorHistory([]); }} className="p-3 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X className="w-6 h-6" /></button>
+                        <button onClick={() => { setViewingAuth(null); setVisitorHistory([]); }} 
+                          className="w-12 h-12 flex items-center justify-center bg-white/5 text-slate-400 hover:bg-red-500/20 hover:text-red-500 rounded-full transition-all border border-white/5">
+                          <X className="w-6 h-6" />
+                        </button>
                     </div>
                     
-                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
-                        <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-6">
+                    <div className="flex-1 overflow-y-auto p-10 space-y-12 custom-scrollbar">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             {/* DNI FRENTE */}
                             {viewingAuth.dni_front_url && (
-                            <div>
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">DNI Frente</p>
-                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border border-slate-200 group bg-slate-50 flex items-center justify-center shadow-inner">
-                                    <img src={viewingAuth.dni_front_url} className="w-full h-full object-cover" alt="DNI Frente" />
-                                    <div className="absolute inset-0 bg-slate-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.dni_front_url)} className="p-3 bg-emerald-600 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-5 h-5" /></button>
-                                    </div>
-                                </div>
-                            </div>
-                            )}
-
-                            {/* DNI DORSO */}
-                            {viewingAuth.dni_back_url && (
-                            <div>
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">DNI Dorso</p>
-                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border border-slate-200 group bg-slate-50 flex items-center justify-center shadow-inner">
-                                    <img src={viewingAuth.dni_back_url} className="w-full h-full object-cover" alt="DNI Dorso" />
-                                    <div className="absolute inset-0 bg-slate-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.dni_back_url)} className="p-3 bg-emerald-600 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-5 h-5" /></button>
-                                    </div>
-                                </div>
-                            </div>
-                            )}
-
-                            {/* SELFIE */}
-                            {viewingAuth.selfie_url && (
-                            <div>
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">Selfie</p>
-                                <div className="relative aspect-square rounded-[2rem] overflow-hidden border border-slate-200 group bg-slate-50 flex items-center justify-center shadow-inner">
-                                    <img src={viewingAuth.selfie_url} className="w-full h-full object-cover" alt="Selfie" />
-                                    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setZoomedImg(viewingAuth.selfie_url)} className="p-3 bg-emerald-600 rounded-full text-white shadow-lg shadow-emerald-500/20"><Maximize2 className="w-5 h-5" /></button>
-                                    </div>
-                                </div>
-                            </div>
-                            )}
+                             <div className="space-y-4">
+                                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2 italic">DNI Anverso</p>
+                                 <div className="luxury-card aspect-[4/3] relative group overflow-hidden bg-white/5 border border-white/10">
+                                     <img src={viewingAuth.dni_front_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                                        <button onClick={() => setZoomedImg(viewingAuth.dni_front_url)} className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center shadow-2xl border border-white/20"><Maximize2 className="w-5 h-5 text-white" /></button>
+                                     </div>
+                                 </div>
+                             </div>
+                             )}
+ 
+                             {/* DNI DORSO */}
+                             {viewingAuth.dni_back_url && (
+                             <div className="space-y-4">
+                                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2 italic">DNI Reverso</p>
+                                 <div className="luxury-card aspect-[4/3] relative group overflow-hidden bg-white/5 border border-white/10">
+                                     <img src={viewingAuth.dni_back_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                                        <button onClick={() => setZoomedImg(viewingAuth.dni_back_url)} className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center shadow-2xl border border-white/20"><Maximize2 className="w-5 h-5 text-white" /></button>
+                                     </div>
+                                 </div>
+                             </div>
+                             )}
+ 
+                             {/* SELFIE */}
+                             {viewingAuth.selfie_url && (
+                             <div className="space-y-4">
+                                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-2 italic">Retrato Biométrico</p>
+                                 <div className="relative aspect-square rounded-[2rem] overflow-hidden border border-white/10 group bg-slate-900 flex items-center justify-center shadow-2xl">
+                                     <img src={viewingAuth.selfie_url} className="w-full h-full object-cover" alt="Selfie" />
+                                     <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                                         <button onClick={() => setZoomedImg(viewingAuth.selfie_url)} className="p-4 bg-emerald-600 rounded-full text-white shadow-lg shadow-emerald-500/20 active:scale-90 transition-all"><Maximize2 className="w-6 h-6" /></button>
+                                     </div>
+                                 </div>
+                             </div>
+                             )}
 
                             {/* SEGURO FRENTE */}
                             {viewingAuth.vehicle_insurance_url && (
@@ -2343,21 +2233,21 @@ export default function GuardiaPortal() {
                         </div>
 
                         {viewingAuth.vehicle_patente && (
-                            <div className="md:col-span-2 bg-slate-50 border border-slate-200 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8 shadow-inner">
+                            <div className="md:col-span-2 bg-white/5 border border-white/10 p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8 shadow-inner">
                                 <div className="flex items-center gap-6">
                                     <div className="p-5 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-500/20">
                                         <Car className="w-10 h-10" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Información del Vehículo</p>
-                                        <h4 className="text-2xl font-black uppercase text-slate-900 tracking-tighter leading-none">{viewingAuth.vehicle_modelo || '---'}</h4>
-                                        <p className="text-sm font-black text-emerald-600 tracking-[0.2em] mt-2">{viewingAuth.vehicle_patente} • Año {viewingAuth.vehicle_anio || '--'}</p>
+                                        <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">Información del Vehículo</p>
+                                        <h4 className="text-2xl font-black uppercase text-white tracking-tighter leading-none">{viewingAuth.vehicle_modelo || '---'}</h4>
+                                        <p className="text-sm font-black text-emerald-500 tracking-[0.2em] mt-2">{viewingAuth.vehicle_patente} • Año {viewingAuth.vehicle_anio || '--'}</p>
                                     </div>
                                 </div>
                                 
                                 <div className="flex flex-col items-center gap-3">
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Validación de Seguro (Guardia)</p>
-                                    <div className="flex p-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm gap-2">
+                                    <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Validación de Seguro (Guardia)</p>
+                                    <div className="flex p-1.5 bg-black/20 rounded-2xl border border-white/5 shadow-sm gap-2">
                                         {[
                                             {id: 'VIGENTE', color: 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20', label: 'VIGENTE'},
                                             {id: 'IMPAGO', color: 'bg-amber-500 text-white shadow-lg shadow-amber-500/20', label: 'IMPAGO'},
@@ -2366,7 +2256,7 @@ export default function GuardiaPortal() {
                                             <button 
                                                 key={s.id}
                                                 onClick={() => updateInsuranceStatus(viewingAuth.id, s.id, !!viewingAuth.isMaster)}
-                                                className={`px-4 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${viewingAuth.insurance_status === s.id ? s.color : 'hover:bg-slate-50 text-slate-400'}`}
+                                                className={`px-4 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${viewingAuth.insurance_status === s.id ? s.color : 'hover:bg-white/5 text-slate-500'}`}
                                             >
                                                 {s.label}
                                             </button>
@@ -2377,438 +2267,339 @@ export default function GuardiaPortal() {
                         )}
 
                         <div className="md:col-span-2">
-                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-2">Historial Reciente</p>
-                             <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                {visitorHistory.length > 0 ? visitorHistory.map(h => (
-                                    <div key={h.id} className="bg-white border border-slate-100 p-4 rounded-2xl flex items-center justify-between shadow-sm">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-2 bg-emerald-50 rounded-xl border border-emerald-100 shadow-inner">
-                                                <Home className="w-3 h-3 text-emerald-600" />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-black uppercase text-slate-900">Lote {h.invitations?.profiles?.lote}</p>
-                                                <p className="text-[8px] font-extrabold text-slate-400">{new Date(h.updated_at).toLocaleDateString('es-AR')}</p>
-                                            </div>
-                                        </div>
-                                        <p className="text-[9px] font-black uppercase text-emerald-600 tracking-widest bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
-                                            {h.status === 'completed' ? 'Salida' : 'Ingreso'} • {new Date(h.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs
-                                        </p>
-                                    </div>
-                                )) : (
-                                    <div className="py-10 bg-slate-50 rounded-2xl text-center border-2 border-dashed border-slate-200 shadow-inner">
-                                        <p className="text-[9px] font-black uppercase text-slate-400 italic">No hay ingresos previos registrados</p>
-                                    </div>
-                                )}
-                             </div>
-                        </div>
-                    </div>
-
-                    <div className="p-8 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row gap-4 items-center justify-between">
-                        <div className="flex flex-col gap-2 w-full sm:w-auto">
+                              <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-4 ml-2 italic">Historial Reciente</p>
+                              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                 {visitorHistory.length > 0 ? visitorHistory.map(h => (
+                                     <div key={h.id} className="bg-white/5 border border-white/5 p-5 rounded-2xl flex items-center justify-between shadow-xl">
+                                         <div className="flex items-center gap-4">
+                                             <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                                 <Home className="w-4 h-4 text-emerald-500" />
+                                             </div>
+                                             <div>
+                                                 <p className="text-[10px] font-black uppercase text-white">Lote {h.invitations?.profiles?.lote}</p>
+                                                 <p className="text-[8px] font-extrabold text-slate-500">{new Date(h.updated_at).toLocaleDateString('es-AR')}</p>
+                                             </div>
+                                         </div>
+                                         <p className="text-[9px] font-black uppercase text-emerald-500 tracking-widest bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/20">
+                                             {h.status === 'completed' ? 'Salida' : 'Ingreso'} • {new Date(h.updated_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs
+                                         </p>
+                                     </div>
+                                 )) : (
+                                     <div className="py-12 bg-black/20 rounded-[2.5rem] text-center border-2 border-dashed border-white/5">
+                                         <p className="text-[9px] font-black uppercase text-slate-600 italic tracking-widest">No hay ingresos previos registrados</p>
+                                     </div>
+                                 )}
+                              </div>
+                         </div>
+                     </div>
+ 
+                     <div className="p-10 bg-slate-900 border-t border-white/5 flex flex-col md:flex-row gap-6 items-center justify-between">
+                        <div className="flex flex-col gap-2 w-full md:w-auto">
                             {!viewingAuth.face_descriptor && (
-                                <button 
-                                    disabled={isDetecting}
-                                    onClick={handleAnalizarBiometria}
-                                    className="px-6 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-2xl border border-blue-200 font-extrabold text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm"
-                                >
-                                    {isDetecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                                    Analizar Biometría
+                                <button disabled={isDetecting} onClick={handleAnalizarBiometria}
+                                    className="h-14 px-8 bg-blue-50 text-blue-600 rounded-2xl font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-3 hover:bg-blue-600 hover:text-white group">
+                                    {isDetecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+                                    Generar Perfil Digital
                                 </button>
                             )}
-                            {viewingAuth.face_descriptor && (
-                                <div className="px-6 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 font-black text-[9px] uppercase tracking-widest flex items-center gap-2 shadow-sm">
-                                    <ShieldCheck className="w-4 h-4" />
-                                    Identidad Digital Generada
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="flex gap-4 w-full sm:w-auto">
-                        {viewingAuth.status === 'pending' ? (
-                          <>
-                            <button 
-                                onClick={() => viewingAuth.isOwner ? handleAuthorizeOwner(viewingAuth.id) : handleApproveVisitor(viewingAuth.id)}
-                                className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/10 transition-all active:scale-95 flex items-center justify-center gap-3"
-                            >
-                                <CheckCircle className="w-5 h-5" />
-                                {viewingAuth.isOwner ? 'Activar Propietario' : 'Aprobar Identidad'}
-                            </button>
-                            <button 
-                                onClick={() => viewingAuth.isOwner ? handleBlockOwner(viewingAuth.id, 'pending') : handleRejectVisitor(viewingAuth.id)}
-                                className="flex-1 sm:flex-initial bg-red-50 hover:bg-red-100 text-red-600 border border-red-100 px-8 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 shadow-sm"
-                            >
-                                <UserX className="w-5 h-5" />
-                                {viewingAuth.isOwner ? 'Rechazar' : 'Rechazar'}
-                            </button>
-                          </>
-                        ) : (
-                          <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-6">
-                             <div className="flex items-center gap-3 px-6 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 font-black text-xs uppercase tracking-widest shadow-sm">
-                                <ShieldCheck className="w-5 h-5" />
-                                Identidad Verificada
-                             </div>
-                             <button 
-                                onClick={() => setViewingAuth(null)}
-                                className="w-full sm:w-auto px-12 bg-white border border-slate-200 text-slate-900 hover:bg-slate-50 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all shadow-sm active:scale-95"
-                             >
-                                Cerrar Ficha
+                             {viewingAuth.face_descriptor && (
+                                 <div className="h-14 px-8 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-500 font-black text-[9px] uppercase tracking-[0.2em] flex items-center gap-3">
+                                     <ShieldCheck className="w-4 h-4" />
+                                     Bio-ID Activa
+                                 </div>
+                             )}
+                         </div>
+                         
+                         <div className="flex gap-4 w-full md:w-auto">
+                         {viewingAuth.status === 'pending' ? (
+                           <>
+                             <button onClick={() => viewingAuth.isOwner ? handleAuthorizeOwner(viewingAuth.id) : handleApproveVisitor(viewingAuth.id)}
+                                 className="flex-1 md:flex-initial h-16 bg-emerald-600 text-white px-10 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-900/40 hover:bg-emerald-500 transition-all active:scale-95 flex items-center justify-center gap-3">
+                                 <CheckCircle className="w-5 h-5" />
+                                 {viewingAuth.isOwner ? 'Activar Vecino' : 'Aprobar Ingreso'}
                              </button>
-                          </div>
-                        )}
-                        </div>
-                    </div>
-                </div>
+                             <button onClick={() => viewingAuth.isOwner ? handleBlockOwner(viewingAuth.id, 'pending') : handleRejectVisitor(viewingAuth.id)}
+                                 className="flex-1 md:flex-initial h-16 bg-white/5 text-red-500 hover:bg-red-600 hover:text-white border border-white/5 px-10 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3">
+                                 <UserX className="w-5 h-5" />
+                                 Rechazar
+                             </button>
+                           </>
+                         ) : (
+                           <div className="w-full flex flex-col md:flex-row items-center justify-between gap-6">
+                              <div className="h-14 px-8 flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-500 font-black text-[9px] uppercase tracking-widest">
+                                 <ShieldCheck className="w-4 h-4" /> Verificación Completada
+                              </div>
+                              <button onClick={() => setViewingAuth(null)}
+                                 className="w-full md:w-auto h-16 px-12 bg-white/5 border border-white/10 text-white hover:bg-white/10 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95">
+                                 Finalizar Auditoría
+                              </button>
+                           </div>
+                         )}
+                         </div>
+                     </div>
+                </motion.div>
             </div>
         )}
 
         {manualEntryVisitor && (
-            <div className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-                <div className="bg-white w-full max-w-md border border-slate-200 rounded-[3rem] shadow-2xl overflow-hidden p-10">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Ingreso Manual</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Asignar destino para {manualEntryVisitor.full_name}</p>
+            <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    className="bg-slate-950 w-full max-w-md luxury-card overflow-hidden p-10 relative border border-white/10">
+                    <div className="flex items-center justify-between mb-10">
+                        <div className="space-y-1">
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Ingreso Manual</h3>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Asignar destino • {manualEntryVisitor.full_name}</p>
                         </div>
-                        <button onClick={() => setManualEntryVisitor(null)} className="p-3 bg-slate-50 border border-slate-100 rounded-full hover:bg-slate-100 transition-all text-slate-400"><X className="w-4 h-4" /></button>
+                        <button onClick={() => setManualEntryVisitor(null)} 
+                          className="w-10 h-10 flex items-center justify-center bg-white/5 text-slate-400 hover:bg-red-500/20 hover:text-red-500 rounded-full transition-all border border-white/5">
+                          <X className="w-4 h-4" />
+                        </button>
                     </div>
 
-                    <div className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-4">Lote Destino</label>
-                            <input 
-                                type="text"
-                                value={manualEntryLote}
-                                onChange={(e) => setManualEntryLote(e.target.value)}
-                                placeholder="EJ: 114"
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-slate-900 shadow-inner"
-                            />
+                    <div className="space-y-8">
+                        <div className="space-y-3">
+                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">Lote Destino</span>
+                            <input type="text" value={manualEntryLote} onChange={e => setManualEntryLote(e.target.value)} placeholder="EJ: 114"
+                                className="w-full h-16 luxury-input px-8 rounded-2xl text-sm font-black uppercase tracking-widest bg-white/5 text-white" />
                         </div>
-                        <button 
-                            onClick={handleConfirmManualEntry}
-                            disabled={!manualEntryLote || loading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/10 transition-all active:scale-95 flex items-center justify-center gap-3"
-                        >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5 text-white" />}
+                        <button onClick={handleConfirmManualEntry} disabled={!manualEntryLote || loading}
+                            className="w-full h-16 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-xl hover:bg-emerald-500 transition-all active:scale-95 flex items-center justify-center gap-3">
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             Confirmar Ingreso
                         </button>
                     </div>
-                </div>
+                </motion.div>
             </div>
         )}
 
         {isAddingVisitor && (
-            <div className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-                <div className="bg-white w-full max-w-md border border-slate-200 rounded-[3rem] shadow-2xl overflow-hidden p-10">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Nueva Identidad</h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Registro Manual de Invitado</p>
+            <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    className="bg-slate-950 w-full max-w-md luxury-card overflow-hidden p-10 relative border border-white/10">
+                    <div className="flex items-center justify-between mb-10">
+                        <div className="space-y-1">
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Nueva Identidad</h3>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Banco Maestro de Invitados</p>
                         </div>
-                        <button onClick={() => setIsAddingVisitor(false)} className="p-3 bg-slate-50 border border-slate-100 rounded-full hover:bg-slate-100 transition-all text-slate-400"><X className="w-4 h-4" /></button>
+                        <button onClick={() => setIsAddingVisitor(false)} 
+                          className="w-10 h-10 flex items-center justify-center bg-white/5 text-slate-400 hover:bg-red-500/20 hover:text-red-500 rounded-full transition-all border border-white/5">
+                          <X className="w-4 h-4" />
+                        </button>
                     </div>
 
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-4">Nombre Completo</label>
-                            <input 
-                                type="text"
-                                value={newVisitor.full_name}
-                                onChange={(e) => setNewVisitor({...newVisitor, full_name: e.target.value.toUpperCase()})}
-                                placeholder="JUAN PEREZ"
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-slate-900 shadow-inner"
-                            />
+                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">Nombre Completo</span>
+                            <input type="text" value={newVisitor.full_name} onChange={e => setNewVisitor({...newVisitor, full_name: e.target.value.toUpperCase()})} placeholder="EJ: JUAN PEREZ"
+                                className="w-full h-16 luxury-input px-8 rounded-2xl text-sm font-black uppercase bg-white/5 text-white" />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-4">DNI / Documento</label>
-                            <input 
-                                type="text"
-                                value={newVisitor.dni}
-                                onChange={(e) => setNewVisitor({...newVisitor, dni: e.target.value})}
-                                placeholder="12345678"
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm font-black uppercase tracking-widest focus:border-emerald-500/50 transition-all text-slate-900 shadow-inner"
-                            />
+                            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">Nro Documento</span>
+                            <input type="text" value={newVisitor.dni} onChange={e => setNewVisitor({...newVisitor, dni: e.target.value})} placeholder="EJ: 35123456"
+                                className="w-full h-16 luxury-input px-8 rounded-2xl text-sm font-black uppercase bg-white/5 text-white" />
                         </div>
-                        <button 
-                            onClick={handleSaveManualVisitor}
-                            disabled={!newVisitor.dni || !newVisitor.full_name || loading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/10 transition-all active:scale-95 flex items-center justify-center gap-3"
-                        >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5" />}
-                            Guardar Identidad
+                        <button onClick={handleSaveManualVisitor} disabled={!newVisitor.dni || !newVisitor.full_name || loading}
+                            className="w-full h-16 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-xl hover:bg-emerald-500 transition-all active:scale-95 flex items-center justify-center gap-3">
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            Crear Identidad
                         </button>
                     </div>
-                </div>
+                </motion.div>
             </div>
         )}
-      </div>
+
         {isAddingTrabajador && (
-            <div className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-                <div className="bg-white border border-slate-200 w-full max-w-lg rounded-[3.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.1)] overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
-                    <div className="p-10 border-b border-slate-100 bg-emerald-50/50">
-                        <div className="flex items-center justify-between mb-2">
-                             <div className="p-3 bg-white rounded-2xl text-emerald-600 border border-emerald-100 shadow-sm">
-                                <UserPlus className="w-6 h-6" />
-                             </div>
-                             <button onClick={() => setIsAddingTrabajador(false)} className="p-3 bg-white border border-slate-100 rounded-full text-slate-400 hover:bg-slate-50 transition-all"><X className="w-6 h-6" /></button>
+            <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                    className="bg-slate-950 w-full max-w-xl luxury-card overflow-hidden shadow-2xl relative border border-white/10">
+                    <div className="p-10 border-b border-white/5 flex items-center justify-between bg-slate-900">
+                        <div className="space-y-1">
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Nuevo Trabajador</h3>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Personal de Mantenimiento / Servicios</p>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Nuevo Trabajador</h3>
-                        <p className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">Registra personal permanente para el barrio</p>
+                        <button onClick={() => setIsAddingTrabajador(false)} 
+                          className="w-10 h-10 flex items-center justify-center bg-white/5 text-slate-400 hover:bg-red-500/20 hover:text-red-500 rounded-full transition-all border border-white/5">
+                          <X className="w-4 h-4" />
+                        </button>
                     </div>
                     
-                    <div className="p-10 space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
+                    <div className="p-10 space-y-8">
+                        <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Nombre Completo</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="EJ: JUAN PEREZ"
-                                    value={newTrabajador.full_name}
-                                    onChange={(e) => setNewTrabajador({...newTrabajador, full_name: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
-                                />
+                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">Nombre Completo</span>
+                                <input type="text" placeholder="EJ: JUAN PEREZ" value={newTrabajador.full_name} onChange={e => setNewTrabajador({...newTrabajador, full_name: e.target.value.toUpperCase()})}
+                                    className="w-full h-14 luxury-input px-6 rounded-2xl text-[10px] font-black uppercase bg-white/5 text-white" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">DNI</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="SÓLO NÚMEROS"
-                                    value={newTrabajador.dni}
-                                    onChange={(e) => setNewTrabajador({...newTrabajador, dni: e.target.value})}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
-                                />
+                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">DNI</span>
+                                <input type="text" placeholder="SIN PUNTOS" value={newTrabajador.dni} onChange={e => setNewTrabajador({...newTrabajador, dni: e.target.value})}
+                                    className="w-full h-14 luxury-input px-6 rounded-2xl text-[10px] font-black uppercase bg-white/5 text-white" />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Categoría</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="EJ: JARDINERO"
-                                    value={newTrabajador.category}
-                                    onChange={(e) => setNewTrabajador({...newTrabajador, category: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
-                                />
+                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">Categoría</span>
+                                <input type="text" placeholder="EJ: JARDINERO" value={newTrabajador.category} onChange={e => setNewTrabajador({...newTrabajador, category: e.target.value.toUpperCase()})}
+                                    className="w-full h-14 luxury-input px-6 rounded-2xl text-[10px] font-black uppercase bg-white/5 text-white" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Empleador / Lote</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="EJ: LOTE 120"
-                                    value={newTrabajador.employer}
-                                    onChange={(e) => setNewTrabajador({...newTrabajador, employer: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
-                                />
+                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">Destino Autorizado</span>
+                                <input type="text" placeholder="LOTE O EMPLEADOR" value={newTrabajador.employer} onChange={e => setNewTrabajador({...newTrabajador, employer: e.target.value.toUpperCase()})}
+                                    className="w-full h-14 luxury-input px-6 rounded-2xl text-[10px] font-black uppercase bg-white/5 text-white" />
                             </div>
                         </div>
 
-                        {/* DOCUMENTACIÓN TRABAJADOR */}
-                        <div className="space-y-4 pt-4 border-t border-slate-100">
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Documentación Obligatoria</p>
-                            <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                            <p className="text-[10px] font-black uppercase text-slate-600 tracking-[0.4em] ml-2 italic">Credencial de Identidad</p>
+                            <div className="grid grid-cols-3 gap-4">
                                 {[
-                                    {id: 'selfie', label: 'Selfie', icon: Users},
-                                    {id: 'dni_front', label: 'DNI Front', icon: ImageIcon},
-                                    {id: 'dni_back', label: 'DNI Back', icon: ImageIcon},
-                                    {id: 'insurance_front', label: 'Seguro F', icon: ShieldCheck},
-                                    {id: 'insurance_back', label: 'Seguro D', icon: ShieldCheck},
-                                    {id: 'art', label: 'ART', icon: Briefcase}
+                                    {id: 'selfie', label: 'Rostro'}, {id: 'dni_front', label: 'DNI Front'}, {id: 'dni_back', label: 'DNI Back'}
                                 ].map(p => (
-                                    <div key={p.id} className="space-y-2">
-                                        <div className="relative aspect-square bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-center overflow-hidden group shadow-inner">
-                                            {manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos] ? (
-                                                <>
-                                                    <img src={manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos]} className="w-full h-full object-cover" />
-                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button onClick={() => startManualCamera(p.id)} className="p-2 bg-emerald-500 rounded-full text-white"><Camera className="w-4 h-4" /></button>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <p className="text-[7px] font-black text-slate-400 uppercase">{p.label}</p>
-                                                    <button 
-                                                        onClick={() => startManualCamera(p.id)}
-                                                        className="mt-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-black text-[7px] uppercase tracking-widest active:scale-95 transition-all flex items-center gap-1 shadow-lg shadow-emerald-500/10"
-                                                    >
-                                                       <Camera className="w-3 h-3 text-white" /> Tomar
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                    <div key={p.id} className="relative aspect-square bg-white/5 rounded-2xl border border-dashed border-white/10 flex items-center justify-center overflow-hidden group shadow-inner hover:border-emerald-500 transition-all">
+                                        {manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos] ? (
+                                            <>
+                                                <img src={manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos]} className="w-full h-full object-cover" />
+                                                <button onClick={() => startManualCamera(p.id)} className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <Camera className="w-6 h-6 text-white" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button onClick={() => startManualCamera(p.id)} className="flex flex-col items-center gap-2">
+                                                <Camera className="w-5 h-5 text-slate-700" />
+                                                <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">{p.label}</span>
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <button 
-                            onClick={handleAddTrabajador}
-                            disabled={loading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-3 mt-4"
-                        >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> Guardar Trabajador</>}
+                        <button onClick={handleAddTrabajador} disabled={loading}
+                            className="w-full h-16 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-2xl hover:bg-emerald-500 transition-all active:scale-95 flex items-center justify-center gap-3">
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            Guardar Trabajador
                         </button>
                     </div>
-
-                </div>
+                </motion.div>
             </div>
         )}
+
         {isAddingPermanente && (
-            <div className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300">
-                <div className="bg-white border border-slate-200 w-full max-w-lg rounded-[3.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.1)] overflow-hidden animate-in slide-in-from-bottom-8 duration-500">
-                    <div className="p-10 border-b border-slate-100 bg-emerald-50/50">
-                        <div className="flex items-center justify-between mb-2">
-                             <div className="p-3 bg-white rounded-2xl text-emerald-600 border border-emerald-100 shadow-sm">
-                                <UserPlus className="w-6 h-6" />
-                             </div>
-                             <button onClick={() => setIsAddingPermanente(false)} className="p-3 bg-white border border-slate-100 rounded-full text-slate-400 hover:bg-slate-50 transition-all"><X className="w-6 h-6" /></button>
+            <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                    className="bg-slate-950 w-full max-w-xl luxury-card overflow-hidden shadow-2xl relative border border-white/10">
+                    <div className="p-10 border-b border-white/5 flex items-center justify-between bg-slate-900">
+                        <div className="space-y-1">
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-white">Nuevo Permanente</h3>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Familiares o contactos con acceso fijo</p>
                         </div>
-                        <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Nuevo Permanente</h3>
-                        <p className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">Familiares o servicios con acceso fijo</p>
+                        <button onClick={() => setIsAddingPermanente(false)} 
+                          className="w-10 h-10 flex items-center justify-center bg-white/5 text-slate-400 hover:bg-red-500/20 hover:text-red-500 rounded-full transition-all border border-white/5">
+                          <X className="w-4 h-4" />
+                        </button>
                     </div>
                     
-                    <div className="p-10 space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
+                    <div className="p-10 space-y-8">
+                        <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Nombre Completo</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="EJ: ANA MARÍA"
-                                    value={newPermanente.full_name}
-                                    onChange={(e) => setNewPermanente({...newPermanente, full_name: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
-                                />
+                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">Nombre Completo</span>
+                                <input type="text" placeholder="EJ: ANA MARÍA" value={newPermanente.full_name} onChange={e => setNewPermanente({...newPermanente, full_name: e.target.value.toUpperCase()})}
+                                    className="w-full h-14 luxury-input px-6 rounded-2xl text-[10px] font-black uppercase bg-white/5 text-white" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">DNI</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="SÓLO NÚMEROS"
-                                    value={newPermanente.dni}
-                                    onChange={(e) => setNewPermanente({...newPermanente, dni: e.target.value})}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
-                                />
+                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">DNI</span>
+                                <input type="text" placeholder="SIN PUNTOS" value={newPermanente.dni} onChange={e => setNewPermanente({...newPermanente, dni: e.target.value})}
+                                    className="w-full h-14 luxury-input px-6 rounded-2xl text-[10px] font-black uppercase bg-white/5 text-white" />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Categoría</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="EJ: FAMILIAR"
-                                    value={newPermanente.category}
-                                    onChange={(e) => setNewPermanente({...newPermanente, category: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
-                                />
+                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">Categoría</span>
+                                <input type="text" placeholder="EJ: FAMILIAR" value={newPermanente.category} onChange={e => setNewPermanente({...newPermanente, category: e.target.value.toUpperCase()})}
+                                    className="w-full h-14 luxury-input px-6 rounded-2xl text-[10px] font-black uppercase bg-white/5 text-white" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Vinculación / Lote</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="EJ: LOTE 210"
-                                    value={newPermanente.employer}
-                                    onChange={(e) => setNewPermanente({...newPermanente, employer: e.target.value.toUpperCase()})}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/50 transition-all shadow-inner"
-                                />
+                                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4 italic">Vínculo con Lote</span>
+                                <input type="text" placeholder="EJ: LOTE 210" value={newPermanente.employer} onChange={e => setNewPermanente({...newPermanente, employer: e.target.value.toUpperCase()})}
+                                    className="w-full h-14 luxury-input px-6 rounded-2xl text-[10px] font-black uppercase bg-white/5 text-white" />
                             </div>
                         </div>
 
-                        {/* DOCUMENTACIÓN PERMANENTE */}
-                        <div className="space-y-4 pt-4 border-t border-slate-100">
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Fotos de Identidad</p>
-                            <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                            <p className="text-[10px] font-black uppercase text-slate-600 tracking-[0.4em] ml-2 italic">Fotos de Identidad</p>
+                            <div className="grid grid-cols-3 gap-4">
                                 {[
-                                    {id: 'selfie', label: 'Selfie', icon: Users},
-                                    {id: 'dni_front', label: 'DNI Front', icon: ImageIcon},
-                                    {id: 'dni_back', label: 'DNI Back', icon: ImageIcon}
+                                    {id: 'selfie', label: 'Rostro'}, {id: 'dni_front', label: 'DNI Front'}, {id: 'dni_back', label: 'DNI Back'}
                                 ].map(p => (
-                                    <div key={p.id} className="space-y-2">
-                                        <div className="relative aspect-square bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-center overflow-hidden group shadow-inner">
-                                            {manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos] ? (
-                                                <>
-                                                    <img src={manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos]} className="w-full h-full object-cover" />
-                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button onClick={() => startManualCamera(p.id)} className="p-2 bg-emerald-500 rounded-full text-white"><Camera className="w-4 h-4" /></button>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <p className="text-[7px] font-black text-slate-400 uppercase">{p.label}</p>
-                                                    <button 
-                                                        onClick={() => startManualCamera(p.id)}
-                                                        className="mt-1 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-black text-[7px] uppercase tracking-widest active:scale-95 transition-all flex items-center gap-1 shadow-lg shadow-emerald-500/10"
-                                                    >
-                                                       <Camera className="w-3 h-3 text-white" /> Tomar
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                    <div key={p.id} className="relative aspect-square bg-white/5 rounded-2xl border border-dashed border-white/10 flex items-center justify-center overflow-hidden group shadow-inner hover:border-emerald-500 transition-all">
+                                        {manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos] ? (
+                                            <>
+                                                <img src={manualCapturedPhotos[p.id as keyof typeof manualCapturedPhotos]} className="w-full h-full object-cover" />
+                                                <button onClick={() => startManualCamera(p.id)} className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <Camera className="w-6 h-6 text-white" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button onClick={() => startManualCamera(p.id)} className="flex flex-col items-center gap-2">
+                                                <Camera className="w-5 h-5 text-slate-700" />
+                                                <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">{p.label}</span>
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <button 
-                            onClick={handleAddPermanente}
-                            disabled={loading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 py-6 rounded-3xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-3 mt-4"
-                        >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> Guardar Permanente</>}
+                        <button onClick={handleAddPermanente} disabled={loading}
+                            className="w-full h-16 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-2xl hover:bg-emerald-500 transition-all active:scale-95 flex items-center justify-center gap-3">
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            Guardar Permanente
                         </button>
                     </div>
-
-                </div>
+                </motion.div>
             </div>
         )}
         
-        {/* MODAL DE ZOOM PARA DOCUMENTACIÓN */}
         <AnimatePresence>
             {zoomedImg && (
-                <div 
-                    className="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-300"
-                    onClick={() => setZoomedImg(null)}
-                >
-                    <motion.div 
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center"
-                    >
-                        <img 
-                            src={zoomedImg} 
-                            className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl" 
-                            alt="Zoom Document" 
-                        />
-                        <button 
-                            className="fixed top-8 right-8 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-all"
-                            onClick={() => setZoomedImg(null)}
-                        >
+                <div className="fixed inset-0 z-[300] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-500"
+                    onClick={() => setZoomedImg(null)}>
+                    <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                        className="relative max-w-6xl w-full max-h-[90vh] flex items-center justify-center">
+                        <img src={zoomedImg} className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-[0_0_100px_rgba(0,0,0,0.5)]" alt="Zoom Document" />
+                        <button className="fixed top-8 right-8 w-14 h-14 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-all flex items-center justify-center"
+                            onClick={() => setZoomedImg(null)}>
+                            <X className="w-6 h-6" />
                         </button>
                     </motion.div>
                 </div>
             )}
         </AnimatePresence>
 
-        {/* CAMERA OVERLAY (GUARD MANUAL ENTRY) */}
         <AnimatePresence>
             {isCapturingManual && (
-                <div className="fixed inset-0 z-[400] bg-black flex flex-col items-center justify-center p-4">
-                    <div className="relative w-full max-w-lg aspect-[3/4] bg-slate-900 rounded-[3rem] overflow-hidden shadow-2xl border-4 border-emerald-500/30">
+                <div className="fixed inset-0 z-[400] bg-[#0c0c0c] flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
+                    <div className="relative w-full max-w-md aspect-[3/4] bg-black rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(16,185,129,0.15)] border-4 border-[#10b981]/10">
                         <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${manualCaptureType === 'selfie' ? 'scale-x-[-1]' : ''}`} />
-                        <div className="absolute inset-x-0 bottom-10 flex flex-col items-center gap-4">
-                            <button 
-                                onClick={handleManualCapture}
-                                className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-2xl shadow-white/20 active:scale-90 transition-all group"
-                            >
-                                <div className="w-16 h-16 border-4 border-black/10 rounded-full group-hover:scale-110 transition-transform" />
+                        <div className="absolute inset-x-0 bottom-12 flex flex-col items-center gap-6">
+                            <button onClick={handleManualCapture}
+                                className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(255,255,255,0.3)] active:scale-90 transition-all group">
+                                <div className="w-20 h-20 border-4 border-slate-900/5 rounded-full group-hover:scale-105 transition-transform" />
                             </button>
-                            <p className="text-white font-black uppercase tracking-[0.3em] text-[10px] drop-shadow-lg">Capturar {manualCaptureType === 'selfie' ? 'Rostro' : 'Documento'}</p>
+                            <p className="text-white font-black uppercase tracking-[0.4em] text-[10px] drop-shadow-2xl">
+                                Capturar {manualCaptureType === 'selfie' ? 'Rostro' : 'Documento'}
+                            </p>
                         </div>
-                        <button onClick={stopManualCamera} className="absolute top-8 right-8 p-4 bg-black/50 backdrop-blur-md rounded-full text-white"><X className="w-6 h-6" /></button>
+                        <button onClick={stopManualCamera} className="absolute top-10 right-10 w-12 h-12 bg-white/10 backdrop-blur-md rounded-full text-white hover:bg-white/20 transition-all flex items-center justify-center">
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
                 </div>
             )}
         </AnimatePresence>
+    </div>
     </div>
   );
 }

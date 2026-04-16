@@ -9,7 +9,6 @@ import {
   Loader2, 
   CheckCircle2, 
   Plus, 
-  ShieldAlert, 
   MessageCircle, 
   Building2, 
   LogOut, 
@@ -17,17 +16,13 @@ import {
   ShieldCheck,
   Settings,
   Users,
-  Lock,
-  Save,
-  CheckCircle,
   X,
   Zap,
   Calendar,
   Briefcase,
   Clock,
   User,
-  Search,
-  ChevronDown
+  Search
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -43,24 +38,20 @@ export default function OwnerDashboard() {
   const [invitationLink, setInvitationLink] = useState<string | null>(null);
   const [invitationType, setInvitationType] = useState<'visit' | 'worker' | 'permanent' | 'delivery'>('visit');
   const [deliveryQuantity, setDeliveryQuantity] = useState(1);
-  const [workerCategory, setWorkerCategory] = useState('Jardinero');
+  const [workerCategory, setWorkerCategory] = useState('Obra');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState("");
-  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [settingsError, setSettingsError] = useState("");
-  const [settingsSuccess, setSettingsSuccess] = useState("");
-  const [frequentVisitors, setFrequentVisitors] = useState<any[]>([]);
   const [activeInvitations, setActiveInvitations] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [activeSearchTerm, setActiveSearchTerm] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  // Helper para obtener fecha local YYYY-MM-DD en Argentina (UTC-3)
+  // Helper para obtener fecha local YYYY-MM-DD
   const getLocalDate = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -71,17 +62,10 @@ export default function OwnerDashboard() {
 
   useEffect(() => {
     verificarAcceso();
-    
-    // CANAL ÚNICO (10s): Solo invitaciones del día (Alta velocidad)
     const criticalInterval = setInterval(() => {
-      if (userProfile?.id) {
-        fetchActiveInvitations(userProfile.id);
-      }
+      if (userProfile?.id) fetchActiveInvitations(userProfile.id);
     }, 10000);
-
-    return () => {
-      clearInterval(criticalInterval);
-    };
+    return () => clearInterval(criticalInterval);
   }, [userProfile?.id]);
 
   const verificarAcceso = async () => {
@@ -104,27 +88,10 @@ export default function OwnerDashboard() {
 
     setUserProfile(profile);
     setNewUsername(profile.username || "");
-    fetchFrequentVisitors(session.user.id);
     fetchActiveInvitations(session.user.id);
     setLoading(false);
   };
 
-  const fetchFrequentVisitors = async (ownerId: string) => {
-    const { data: invitations } = await supabase
-      .from('invitations')
-      .select('visitor_dni')
-      .eq('owner_id', ownerId);
-    
-    if (invitations && invitations.length > 0) {
-      const dnis = [...new Set(invitations.map(i => i.visitor_dni).filter(Boolean))];
-      const { data: visitors } = await supabase
-        .from('visitors')
-        .select('*')
-        .in('dni', dnis);
-      
-      if (visitors) setFrequentVisitors(visitors);
-    }
-  };
   const fetchActiveInvitations = async (ownerId: string) => {
     const { data } = await supabase
       .from('invitations')
@@ -137,8 +104,6 @@ export default function OwnerDashboard() {
       .limit(50);
     
     if (data) {
-      // Ordenamiento de registros internos: Cada invitación tiene un array de registros,
-      // nos interesa el más reciente para determinar el estado actual.
       const sortedData = data.map(inv => ({
         ...inv,
         visitor_records: inv.visitor_records?.sort((a: any, b: any) => 
@@ -146,214 +111,48 @@ export default function OwnerDashboard() {
         )
       }));
 
-      // FILTRO ROBUSTO: Solo mostrar si tiene registros biométricos O si el nombre NO es el placeholder
       const filteredData = sortedData.filter(inv => {
-        // Si es delivery y ya salieron todos, ocultarlo
-        if (inv.type === 'delivery' && (inv.delivery_exit_count || 0) >= inv.delivery_quantity) {
-          return false;
-        }
-
-        const hasRecords = inv.visitor_records && inv.visitor_records.length > 0;
+        if (inv.type === 'delivery' && (inv.delivery_exit_count || 0) >= inv.delivery_quantity) return false;
         const currentName = (inv.visitor_name || "").trim().toLowerCase();
-        const pkgName = "invitado a identificar";
-        
-        // Es placeholder si está vacío o si coincide con el texto genérico
-        const isPlaceholder = currentName === "" || currentName === pkgName;
-        
-        return hasRecords || !isPlaceholder;
+        return (inv.visitor_records && inv.visitor_records.length > 0) || (currentName !== "" && currentName !== "invitado a identificar");
       });
 
       setActiveInvitations(filteredData);
     }
   };
 
-  const handleAutoInvite = async (visitor: any) => {
+  const handleCreateInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
     setSubmitting(true);
     const today = getLocalDate();
-    
-    const { data: inv, error: invErr } = await supabase
-      .from("invitations")
-      .insert([{ 
-          visitor_name: visitor.full_name, 
-          expected_date: today, 
-          owner_id: userProfile.id,
-          visitor_dni: visitor.dni
-      }])
-      .select().maybeSingle();
-
-    if (invErr) {
-        setErrorDetails("No se pudo crear la invitación automática.");
-        setSubmitting(false);
-        return;
-    }
-
-    const { error: recErr } = await supabase
-        .from('visitor_records')
-        .insert([{
-            invitation_id: inv.id,
-            dni: visitor.dni,
-            full_name: visitor.full_name,
-            dni_front_url: visitor.dni_front_url,
-            selfie_url: visitor.selfie_url,
-            face_descriptor: visitor.face_descriptor,
-            status: 'approved'
-        }]);
-
-    if (recErr) {
-        console.error("Error al crear registro automático:", recErr);
-    }
-
-    await fetchActiveInvitations(userProfile.id);
-    setSubmitting(false);
-    alert(`Invitación automática generada para ${visitor.full_name}. El guardia ya puede verlo en el sistema.`);
-  };
-
-  const handleReAuthorize = async (inv: any) => {
-    setSubmitting(true);
-    try {
-        const today = getLocalDate();
-        
-        // 1. Buscamos el registro anterior para clonarlo
-        const { data: records, error: fetchErr } = await supabase
-          .from('visitor_records')
-          .select('*')
-          .eq('invitation_id', inv.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (fetchErr || !records || records.length === 0) {
-          alert("No se encontraron registros biométricos previos para este invitado.");
-          return;
-        }
-
-        const pastRecord = records[0];
-
-        // 2. Crear registro APROBADO instantáneamente en ACCESOS
-        const { error: recErr } = await supabase
-            .from('visitor_records')
-            .insert([{
-                invitation_id: inv.id,
-                dni: pastRecord.dni,
-                full_name: pastRecord.full_name,
-                dni_front_url: pastRecord.dni_front_url,
-                selfie_url: pastRecord.selfie_url,
-                face_descriptor: pastRecord.face_descriptor,
-                status: 'approved'
-            }]);
-
-        if (recErr) throw recErr;
-
-        await supabase.from('invitations').update({ 
-          visitor_name: pastRecord.full_name + " [APROBADO]" 
-        }).eq('id', inv.id);
-
-        await fetchActiveInvitations(userProfile.id);
-        alert(`⚠ Acceso Express RE-ACTIVADO para ${pastRecord.full_name}.`);
-    } catch (err: any) {
-        console.error("Error en re-autorización:", err);
-        alert("Hubo un problema al re-autorizar el acceso: " + err.message);
-    } finally {
-        setSubmitting(false);
-    }
-  };
-
-  const handleQuickInvite = async (visitor: any) => {
-    setSubmitting(true);
-    
     const { data, error } = await supabase
       .from("invitations")
       .insert([{ 
-          visitor_name: visitor.full_name, 
-          expected_date: expectedDate, 
-          owner_id: userProfile.id,
-          visitor_dni: visitor.dni
+        visitor_name: invitationType === 'delivery' ? `DELIVERY (${userProfile?.full_name})` : "Invitado a Identificar", 
+        expected_date: invitationType === 'delivery' ? today : (invitationType === 'permanent' || invitationType === 'worker') ? startDate : expectedDate, 
+        owner_id: userProfile.id,
+        type: invitationType,
+        category: invitationType === 'worker' ? workerCategory : null,
+        start_date: (invitationType === 'permanent' || invitationType === 'worker') ? startDate : invitationType === 'delivery' ? today : null,
+        end_date: (invitationType === 'permanent' || invitationType === 'worker') ? endDate : null,
+        delivery_quantity: invitationType === 'delivery' ? deliveryQuantity : 1,
+        delivery_count: 0
       }])
       .select().maybeSingle();
 
-    if (error) {
-       setErrorDetails("No se pudo repetir la invitación.");
-    } else {
-       setInvitationLink(`${window.location.origin}/visitante/${data.id}`);
-    }
+    if (data) setInvitationLink(`${window.location.origin}/visitante/${data.id}`);
     setSubmitting(false);
-  };
-
-  const handleUpdateSettings = async () => {
-    setIsUpdating(true);
-    setSettingsError("");
-    setSettingsSuccess("");
-    
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error("No autenticado");
-
-      if (newUsername && newUsername.length >= 6) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ username: newUsername.toLowerCase() })
-          .eq('id', user.id);
-        
-        if (profileError) throw profileError;
-        
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-        
-        if (profileData) {
-          setUserProfile(profileData);
-          setNewUsername(profileData.username || "");
-        }
-      } else if (newUsername) {
-        throw new Error("El usuario debe tener al menos 6 caracteres.");
-      }
-
-      if (newPassword) {
-        if (newPassword.length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres.");
-        const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
-        if (authError) throw authError;
-      }
-
-      setSettingsSuccess("Configuración actualizada correctamente.");
-      setTimeout(() => setShowSettings(false), 2000);
-    } catch (err: any) {
-      setSettingsError(err.message || "Error al actualizar la configuración.");
-    } finally {
-      setIsUpdating(false);
-    }
+    fetchActiveInvitations(userProfile.id);
   };
 
   const handleDeleteInvitation = async (id: string) => {
-    const previousInvitations = [...activeInvitations];
-    setActiveInvitations(prev => prev.filter(inv => inv.id !== id));
+    await supabase.from('invitations').delete().eq('id', id);
     setConfirmDeleteId(null);
-    
-    try {
-      const { data, error } = await supabase
-        .from('invitations')
-        .delete()
-        .eq('id', id)
-        .select();
-
-      if (error) {
-        console.error("Error completo Supabase:", error);
-        alert(`ERROR TÉCNICO:\nMensaje: ${error.message}\nDetalle: ${error.details}\nSugerencia: ${error.hint}\nCódigo: ${error.code}`);
-        throw error;
-      }
-
-      if (userProfile) fetchFrequentVisitors(userProfile.id);
-      
-    } catch (error: any) {
-      setActiveInvitations(previousInvitations);
-    }
+    fetchActiveInvitations(userProfile.id);
   };
 
   const handleExpressAuthorization = async (inv: any) => {
     setSubmitting(true);
-    
-    // 1. Buscar en registros anteriores del MISMO PROPIETARIO (permite búsqueda parcial)
-    let matchedDni = null;
     const { data: pastInvites } = await supabase
       .from('invitations')
       .select('visitor_dni')
@@ -363,659 +162,291 @@ export default function OwnerDashboard() {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    if (pastInvites && pastInvites.length > 0) {
-      matchedDni = pastInvites[0].visitor_dni;
-    } else {
-      // 2. Búsqueda exacta global
-      const { data: exactMatch } = await supabase
-        .from('visitors')
-        .select('dni')
-        .ilike('full_name', inv.visitor_name)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      if (exactMatch && exactMatch.length > 0) matchedDni = exactMatch[0].dni;
-    }
-
-    if (matchedDni) {
-      const { data: visitorData } = await supabase.from('visitors').select('*').eq('dni', matchedDni).maybeSingle();
-      
+    if (pastInvites?.[0]?.visitor_dni) {
+      const { data: visitorData } = await supabase.from('visitors').select('*').eq('dni', pastInvites[0].visitor_dni).maybeSingle();
       if (visitorData) {
-        const { error } = await supabase
-          .from('visitor_records')
-          .insert([{
-            invitation_id: inv.id,
-            dni: visitorData.dni,
-            full_name: visitorData.full_name,
-            dni_front_url: visitorData.dni_front_url,
-            selfie_url: visitorData.selfie_url,
-            face_descriptor: visitorData.face_descriptor,
-            status: 'approved'
-          }]);
-        
-        if (!error) {
-          await supabase.from('invitations').update({ visitor_dni: visitorData.dni }).eq('id', inv.id);
-          alert(`✅ ${visitorData.full_name} fue autorizado automáticamente usando sus datos biométricos previos.`);
-          await fetchActiveInvitations(userProfile.id);
-          setSubmitting(false);
-          return;
-        }
+        await supabase.from('visitor_records').insert([{
+          invitation_id: inv.id,
+          dni: visitorData.dni,
+          full_name: visitorData.full_name,
+          dni_front_url: visitorData.dni_front_url,
+          selfie_url: visitorData.selfie_url,
+          face_descriptor: visitorData.face_descriptor,
+          status: 'approved'
+        }]);
+        await supabase.from('invitations').update({ visitor_dni: visitorData.dni }).eq('id', inv.id);
+        fetchActiveInvitations(userProfile.id);
+        setSubmitting(false);
+        return;
       }
     }
-
-    // SI FALLA o NO EXISTE, abrimos la pantalla para compartir
-    alert(`⚠️ No se encontraron registros de ${inv.visitor_name}. Compartile el enlace para su registro biométrico inicial.`);
-    const link = `${window.location.origin}/visitante/${inv.id}`;
-    setInvitationLink(link);
+    setInvitationLink(`${window.location.origin}/visitante/${inv.id}`);
     setSubmitting(false);
+  };
+
+  const handleUpdateSettings = async () => {
+    setIsUpdating(true);
+    const user = (await supabase.auth.getUser()).data.user;
+    if (user) {
+      if (newUsername) await supabase.from('profiles').update({ username: newUsername.toLowerCase() }).eq('id', user.id);
+      if (newPassword) await supabase.auth.updateUser({ password: newPassword });
+      setShowSettings(false);
+    }
+    setIsUpdating(false);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    sessionStorage.clear();
-    window.location.href = "/";
+    router.push("/");
   };
 
-  const handleCreateInvitation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setErrorDetails(null);
-
-    const today = getLocalDate();
-    const { data, error } = await supabase
-      .from("invitations")
-      .insert([
-          { 
-            visitor_name: invitationType === 'delivery' ? `DELIVERY (${userProfile?.full_name})` : "Invitado a Identificar", 
-            expected_date: invitationType === 'delivery' ? today : (invitationType === 'permanent' || invitationType === 'worker') ? startDate : expectedDate, 
-            owner_id: userProfile.id,
-            type: invitationType,
-            category: invitationType === 'worker' ? workerCategory : null,
-            start_date: (invitationType === 'permanent' || invitationType === 'worker') ? startDate : invitationType === 'delivery' ? today : null,
-            end_date: (invitationType === 'permanent' || invitationType === 'worker') ? endDate : null,
-            delivery_quantity: invitationType === 'delivery' ? deliveryQuantity : 1,
-            delivery_count: 0
-          }
-      ])
-      .select()
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error al crear invitación:", error.message);
-      setErrorDetails(`No se pudo crear la invitación: ${error.message}`);
-    } else if (data) {
-      const link = `${window.location.origin}/visitante/${data.id}`;
-      setInvitationLink(link);
-    }
-    
-    setSubmitting(false);
-  };
-
-  const [copied, setCopied] = useState(false);
   const shareByWhatsApp = () => {
-    if (!invitationLink) return;
     const message = `¡Hola! Aquí tienes tu pase para ingresar al Barrio Seguro. Por favor, completá el registro antes de llegar a la guardia: ${invitationLink}`;
-    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const copyToClipboard = async () => {
-    if (!invitationLink) return;
-    
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(invitationLink);
-      } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = invitationLink;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        textArea.style.top = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
-      
+    if (invitationLink) {
+      await navigator.clipboard.writeText(invitationLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Error al copiar:", err);
     }
   };
 
   const visibleInvitations = activeInvitations.filter(inv => {
     const rec = inv.visitor_records?.[0];
-    const invName = rec?.full_name || inv.visitor_name || "Invitado a Identificar";
-    const cleanName = invName.replace(/ \[.*\]/, "");
-
-    const matchesSearch = cleanName.toLowerCase().includes(activeSearchTerm.toLowerCase()) ||
-                         (rec?.dni || inv.visitor_dni || "").includes(activeSearchTerm);
-
-    return matchesSearch;
+    const name = (rec?.full_name || inv.visitor_name || "").toLowerCase();
+    const dni = (rec?.dni || inv.visitor_dni || "");
+    return name.includes(activeSearchTerm.toLowerCase()) || dni.includes(activeSearchTerm);
   });
 
   if (loading) return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <Loader2 className="w-12 h-12 text-emerald-600 animate-spin" />
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500/40">{CONFIG.neighborhoodName}</p>
+      </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-6 md:p-12 relative overflow-hidden transition-colors duration-500">
-      <div className="absolute top-0 right-[-10%] w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div className="min-h-screen bg-slate-950 text-white px-6 py-8 md:px-20 md:py-16 overflow-x-hidden selection:bg-emerald-500/10">
+      <div className="fixed inset-0 pointer-events-none opacity-40">
+        <div className="absolute top-[-10%] right-[-5%] w-[60%] h-[60%] bg-emerald-500/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-5%] left-[-5%] w-[40%] h-[40%] bg-emerald-900/5 rounded-full blur-[100px]" />
+      </div>
 
-      <div className="max-w-2xl mx-auto relative z-10">
-        <Link href="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-emerald-400 transition-colors mb-8 group">
-          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          Volver al Inicio
-        </Link>
-        
-        <header className="mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
-              <Building2 className="w-8 h-8 text-emerald-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tighter leading-none">
-                {CONFIG.brandName}
-              </h1>
-              <p className="text-emerald-600 text-xs font-black uppercase tracking-[0.3em]">{CONFIG.neighborhoodName}</p>
-            </div>
+      <div className="max-w-6xl mx-auto relative z-10">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-20 animate-in fade-in slide-in-from-top-4 duration-1000">
+          <div className="space-y-4">
+             <Link href="/" className="inline-flex items-center gap-3 text-slate-500 opacity-60 hover:opacity-100 transition-all group mb-4">
+               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Inicio</span>
+             </Link>
+             <div className="flex items-center gap-6">
+                <div className="w-16 h-16 bg-white/5 luxury-card rounded-[2rem] flex items-center justify-center border border-white/5">
+                   <Building2 className="w-8 h-8 text-emerald-500" />
+                </div>
+                <div>
+                   <h1 className="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-500 tracking-tighter uppercase leading-none">
+                     {CONFIG.brandName}
+                   </h1>
+                   <p className="text-[12px] font-black text-emerald-500 uppercase tracking-[0.5em] mt-3 flex items-center gap-2">
+                     <ShieldCheck className="w-4 h-4" /> {CONFIG.neighborhoodName}
+                   </p>
+                </div>
+             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setShowSettings(true)}
-              className="p-3 bg-white hover:bg-slate-50 rounded-2xl transition-all border border-slate-200 shadow-sm group"
-            >
-              <Settings className="w-5 h-5 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block text-right mr-4">
+               <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Propietario</p>
+               <p className="text-sm font-black text-white uppercase">Lote {userProfile?.lote || "..."}</p>
+            </div>
+            <button onClick={() => setShowSettings(true)} className="w-14 h-14 bg-white/5 luxury-card border border-white/5 rounded-2xl flex items-center justify-center group">
+              <Settings className="w-5 h-5 text-slate-500 group-hover:text-emerald-500 transition-colors" />
             </button>
-            <button 
-              onClick={handleLogout}
-              className="p-3 bg-red-500/5 hover:bg-red-500/10 text-red-600 rounded-2xl transition-all border border-red-500/10"
-            >
+            <button onClick={handleLogout} className="w-14 h-14 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl flex items-center justify-center transition-all border border-red-500/20">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
         </header>
 
-         <div className="mb-8 flex items-center justify-between">
-           <div>
-             <h2 className="text-xl font-bold text-slate-800">
-               Panel de Propietario
-             </h2>
-             <p className="text-slate-500 text-sm mt-1">Genera una nueva invitación para acceder al barrio.</p>
-           </div>
-           <span className="text-[9px] font-black uppercase text-slate-600 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">Build v6.5</span>
-         </div>
-
-        <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-xl overflow-hidden">
-          {!invitationLink ? (
-            <div className="flex flex-col w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="text-center space-y-2">
-                <h3 className="text-xl font-black uppercase text-slate-800 tracking-widest">Crear Nuevo Pase</h3>
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest leading-relaxed">
-                  Seleccioná el tipo de acceso para continuar
-                </p>
-              </div>
-
-              {/* Selector de Tipo */}
-              <div className="grid grid-cols-3 gap-2 p-1 bg-slate-50 rounded-2xl border border-slate-100">
-                {[
-                  { id: 'visit', label: 'Visita', icon: User },
-                  { id: 'worker', label: 'Trabajador', icon: Briefcase },
-                  { id: 'permanent', label: 'Permanente', icon: Clock },
-                  { id: 'delivery', label: 'Delivery', icon: Zap }
-                ].map((type) => (
-                  <button
-                    key={type.id}
-                    onClick={() => setInvitationType(type.id as any)}
-                    className={`flex flex-col items-center justify-center py-4 rounded-xl transition-all gap-2 ${
-                      invitationType === type.id 
-                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
-                        : 'text-slate-500 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <type.icon className="w-5 h-5" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">{type.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Campos Condicionales */}
-              <div className="space-y-6">
-                {invitationType === 'visit' && (
-                  <div className="space-y-2 animate-in fade-in zoom-in-95 duration-300">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] ml-4">Fecha de Visita</label>
-                    <div className="relative">
-                      <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
-                      <input 
-                        type="date" 
-                        value={expectedDate}
-                        onChange={(e) => setExpectedDate(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 pl-14 text-sm font-black text-slate-900 focus:border-emerald-500/50 outline-none transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {invitationType === 'worker' && (
-                  <>
-                    <div className="space-y-2 animate-in fade-in zoom-in-95 duration-300">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4">Rubro del Trabajador</label>
-                      <div className="relative">
-                        <Briefcase className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-600 pointer-events-none" />
-                        <select 
-                          value={workerCategory}
-                          onChange={(e) => setWorkerCategory(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 pl-14 text-sm font-black text-slate-900 appearance-none focus:border-emerald-500/50 outline-none transition-all shadow-inner"
-                        >
-                          {['Jardinero', 'Plomero', 'Electricista', 'Gasista', 'Piletero', 'Personal Doméstico', 'Otros'].map(cat => (
-                            <option key={cat} value={cat} className="bg-white">{cat}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 animate-in fade-in zoom-in-95 duration-300">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Desde</label>
-                        <input 
-                          type="date" 
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-900 focus:border-emerald-500/50 outline-none shadow-inner"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Hasta</label>
-                        <input 
-                          type="date" 
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-900 focus:border-emerald-500/50 outline-none shadow-inner"
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {invitationType === 'permanent' && (
-                  <div className="grid grid-cols-2 gap-4 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Desde</label>
-                      <input 
-                        type="date" 
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-900 focus:border-emerald-500/50 outline-none shadow-inner"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-4">Hasta</label>
-                      <input 
-                        type="date" 
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-black text-slate-900 focus:border-emerald-500/50 outline-none shadow-inner"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {invitationType === 'delivery' && (
-                  <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-4">Cantidad de Entregas Autorizadas (Hoy)</label>
-                    <div className="grid grid-cols-5 gap-2">
-                       {[1, 2, 3, 4, 5].map(q => (
-                         <button 
-                           key={q}
-                           type="button"
-                           onClick={() => setDeliveryQuantity(q)}
-                           className={`py-4 rounded-2xl font-black text-xs transition-all border ${deliveryQuantity === q ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg' : 'bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300'}`}
-                         >
-                           {q}
-                         </button>
-                       ))}
-                    </div>
-                    <p className="text-[9px] font-black uppercase text-emerald-600/70 text-center tracking-widest mt-2 animate-pulse">
-                      VÁLIDO ÚNICAMENTE PARA EL DÍA DE HOY
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <button 
-                onClick={handleCreateInvitation}
-                disabled={submitting || (invitationType === 'permanent' && !endDate)}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-30 text-white py-6 rounded-3xl shadow-xl shadow-emerald-500/10 transition-all active:scale-95 flex items-center justify-center gap-3 font-black uppercase tracking-widest text-xs"
-              >
-                {submitting ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                ) : (
-                  <>
-                    <Plus className="w-6 h-6" /> 
-                    {
-                      invitationType === 'visit' ? 'Crear Visita' : 
-                      invitationType === 'worker' ? 'Crear Acceso Laboral' : 
-                      invitationType === 'delivery' ? 'Crear Acceso Delivery' :
-                      'Crear Acceso Permanente'
-                    }
-                  </>
-                )}
-              </button>
-            </div>
-          ) : (
-            <div className="text-center py-8 space-y-6 animate-in fade-in zoom-in duration-500">
-              <div className="flex justify-center mb-4">
-                <div className="p-4 bg-emerald-50 rounded-full text-emerald-600 border border-emerald-100 shadow-sm">
-                  <CheckCircle2 className="w-12 h-12" />
-                </div>
-              </div>
-              <h2 className="text-2xl font-bold text-slate-800">¡Pase Generado Exitosamente!</h2>
-              
-              <div className="flex justify-center mt-6 mb-4">
-                <div className="p-4 bg-white rounded-3xl shadow-xl shadow-emerald-500/5 border-4 border-emerald-500/10">
-                   <QRCodeSVG value={invitationLink} size={220} level={"H"} className="text-slate-900" includeMargin={true} />
-                </div>
-              </div>
-
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl break-all shadow-inner">
-                <p className="text-emerald-700 text-sm font-mono font-bold leading-relaxed">{invitationLink}</p>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={shareByWhatsApp}
-                  className="w-full flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#128C7E] text-white py-4 rounded-xl transition-all font-black shadow-lg shadow-green-900/10 active:scale-95"
-                >
-                  <MessageCircle className="w-6 h-6 fill-current" />
-                  Enviar por WhatsApp
-                </button>
-
-                <div className="flex gap-4">
-                  <button 
-                    onClick={copyToClipboard}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest ${copied ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-600 shadow-sm hover:bg-slate-50'}`}
-                  >
-                    {copied ? <CheckCircle2 className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                    {copied ? "¡Copiado!" : "Copiar Enlace"}
-                  </button>
-                  <button 
-                    onClick={() => { setInvitationLink(null); }}
-                    className="flex-1 flex items-center justify-center gap-2 border border-slate-200 bg-white text-slate-600 py-3 rounded-xl transition-all font-bold uppercase text-[10px] tracking-widest shadow-sm hover:bg-slate-50"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Crear Otra
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-12 space-y-6">
-            <div className="flex items-center justify-between px-4">
-                <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-900">Invitados</h3>
-                </div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{visibleInvitations.length} TOTAL</p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <div className="lg:col-span-5 space-y-10">
+            <div className="space-y-2">
+               <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Crear Autorización</h2>
+               <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Gestión de invitados y personal</p>
             </div>
 
-            <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input 
-                    type="text" 
-                    value={activeSearchTerm}
-                    onChange={(e) => setActiveSearchTerm(e.target.value)}
-                    placeholder="BUSCAR EN LOS ACCESOS..." 
-                    className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-[10px] font-black uppercase tracking-widest text-slate-900 focus:border-emerald-500/30 outline-none transition-all shadow-sm"
-                />
-            </div>
+            <div className="luxury-card p-10 relative overflow-hidden bg-slate-900/40 border border-white/5 shadow-2xl">
+               {!invitationLink ? (
+                <form onSubmit={handleCreateInvitation} className="space-y-10 animate-in fade-in duration-700">
+                   <div className="grid grid-cols-4 gap-3">
+                      {[
+                        { id: 'visit', label: 'Visita', icon: User },
+                        { id: 'worker', label: 'Obra', icon: Briefcase },
+                        { id: 'delivery', label: 'Delivery', icon: Zap },
+                        { id: 'permanent', label: 'Perma', icon: Clock }
+                      ].map((t) => (
+                        <button key={t.id} type="button" onClick={() => setInvitationType(t.id as any)}
+                          className={`flex flex-col items-center gap-3 p-4 rounded-2xl transition-all border ${invitationType === t.id ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-white/5 border-white/5 text-slate-500 hover:text-white'}`}>
+                          <t.icon className="w-5 h-5" />
+                          <span className="text-[8px] font-black uppercase tracking-widest">{t.label}</span>
+                        </button>
+                      ))}
+                   </div>
 
-            <div className="grid grid-cols-1 gap-3">
-                {visibleInvitations.length > 0 ? (
-                    visibleInvitations.map((inv) => {
-                        const rec = inv.visitor_records?.[0];
-                            
-                            // Detección de estado por marcador redundante (Fix Sincronización)
-                            let status = rec?.status || 'no_registered';
-                            const invName = rec?.full_name || inv.visitor_name || "Invitado a Identificar";
-                            
-                            // Lógica de Re-ingreso para Personas con Permanencia (Worker/Permanent)
-                            // Si alguien salió pero su pase sigue vigente, lo mostramos como "Por ingresar"
-                            const isTenure = inv.type === 'worker' || inv.type === 'permanent';
-                            const hasValidDates = !inv.end_date || new Date(inv.end_date) >= new Date(new Date().setHours(0,0,0,0));
-                            
-                            if (status === 'no_registered') {
-                                if (invName.includes("[INGRESÓ]")) status = 'inside';
-                                else if (invName.includes("[SALIÓ]")) {
-                                    status = (isTenure && hasValidDates) ? 'approved' : 'completed';
-                                }
-                                else if (invName.includes("[APROBADO]")) status = 'approved';
-                                else if (invName.includes("[RECHAZADO]")) status = 'rejected';
-                                else if (invName !== "Invitado a Identificar" && inv.visitor_dni) status = 'pending';
-                            } else if (status === 'completed' && isTenure && hasValidDates) {
-                                status = 'approved';
-                            }
-                            
-                            const isDelivery = inv.type === 'delivery';
-                            const cleanName = isDelivery ? "DELIVERY" : invName.replace(/ \[.*\]/, "");
-                            const initChar = cleanName !== "Invitado a Identificar" ? cleanName[0].toUpperCase() : "I";
-                            const dniToShow = isDelivery ? "" : (rec?.dni || inv.visitor_dni || "");
-                            
-                                
-                        return (
-                            <div key={inv.id} className="bg-white border border-slate-100 p-5 rounded-[2rem] flex items-center justify-between group hover:border-emerald-500/20 transition-all shadow-sm">
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shadow-inner ${
-                                        status === 'inside' || (isDelivery && inv.delivery_count > 0) ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
-                                        status === 'completed' || (isDelivery && inv.delivery_count >= inv.delivery_quantity) ? 'bg-red-50 text-red-600 border border-red-100' :
-                                        isDelivery ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-                                        'bg-slate-50 text-slate-400 border border-slate-100'
-                                    }`}>
-                                        {isDelivery ? <Zap className="w-5 h-5" /> : initChar}
-                                    </div>
-                                    <div>
-                                        <h4 className="font-black uppercase text-xs text-slate-900 group-hover:text-emerald-700 transition-colors">
-                                            {cleanName} {dniToShow && <span className="text-slate-400 ml-1">DNI {dniToShow}</span>}
-                                        </h4>
-                                        <p className="text-[10px] font-black uppercase text-slate-400 mt-0.5 tracking-tight">
-                                            {inv.type === 'visit' ? 'VISITA' : inv.type === 'worker' ? 'TRABAJADOR' : inv.type === 'delivery' ? 'DELIVERY' : 'PERMANENTE'}
-                                        </p>
-                                        <div className="mt-2 flex items-center gap-2">
-                                            {isDelivery ? (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {inv.delivery_count === 0 ? (
-                                                        <span className="text-[8px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Por ingresar al barrio</span>
-                                                    ) : (
-                                                        <>
-                                                            <span className="text-[8px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                                                                Ingresó ({inv.delivery_count} de {inv.delivery_quantity})
-                                                            </span>
-                                                            {(inv.delivery_exit_count || 0) > 0 && (
-                                                                <span className="text-[8px] font-black uppercase text-red-600 bg-red-50 px-2 py-0.5 rounded">
-                                                                    Egresó ({inv.delivery_exit_count} de {inv.delivery_quantity})
-                                                                </span>
-                                                            )}
-                                                            {(inv.delivery_count - (inv.delivery_exit_count || 0)) > 0 && (
-                                                                <span className="text-[8px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded animate-pulse">
-                                                                    {(inv.delivery_count - (inv.delivery_exit_count || 0))} en barrio
-                                                                </span>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    {status === 'no_registered' && <span className="text-[8px] font-black uppercase text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">Esperando Registro</span>}
-                                                    {status === 'pending' && <span className="text-[8px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded animate-pulse">Registro Pendiente</span>}
-                                                    {status === 'approved' && <span className="text-[8px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Por ingresar al barrio</span>}
-                                                    {status === 'inside' && <span className="text-[8px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Ingresó al barrio</span>}
-                                                    {status === 'completed' && <span className="text-[8px] font-black uppercase text-red-600 bg-red-50 px-2 py-0.5 rounded">Salió del barrio</span>}
-                                                    {status === 'rejected' && <span className="text-[8px] font-black uppercase text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">Registro Rechazado</span>}
-                                                </>
-                                            )}
-
-                                            {isTenure && hasValidDates && (
-                                              <span className="text-[8px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Autorización Activa</span>
-                                            )}
-                                            {inv.end_date && new Date(inv.end_date) < new Date(new Date().setHours(0,0,0,0)) && (
-                                                <span className="text-[8px] font-black uppercase text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">Autorización Vencida</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {(status === 'no_registered' || status === 'approved') && (
-                                        <button 
-                                          onClick={() => {
-                                            if (status === 'no_registered') handleExpressAuthorization(inv);
-                                            else {
-                                              const link = `${window.location.origin}/visitante/${inv.id}`;
-                                              setInvitationLink(link);
-                                            }
-                                          }}
-                                          disabled={submitting}
-                                          className="p-3 bg-slate-50 hover:bg-emerald-600 hover:text-white text-slate-400 rounded-xl transition-all disabled:opacity-50 border border-slate-200 shadow-sm"
-                                          title={status === 'no_registered' ? "Autorización Exprés / Compartir" : "Ver Pase / QR"}
-                                        >
-                                            <Share2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                    {status === 'completed' && (
-                                        <button 
-                                          onClick={() => handleReAuthorize(inv)}
-                                          disabled={submitting}
-                                          className="p-3 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl transition-all border border-emerald-100 shadow-sm"
-                                          title="Acceso Express / Re-ingreso"
-                                        >
-                                            <Zap className="w-4 h-4 fill-current" />
-                                        </button>
-                                    )}
-                                    {confirmDeleteId === inv.id ? (
-                                        <div className="flex items-center gap-1">
-                                            <button 
-                                                onClick={() => handleDeleteInvitation(inv.id)}
-                                                className="px-3 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all text-[9px] font-black uppercase tracking-widest shadow-lg shadow-red-500/10"
-                                            >
-                                                Confirmar
-                                            </button>
-                                            <button 
-                                                onClick={() => setConfirmDeleteId(null)}
-                                                className="px-3 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest border border-slate-200"
-                                            >
-                                                Cancelar
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button 
-                                            onClick={() => setConfirmDeleteId(inv.id)}
-                                            className="p-3 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-xl transition-all border border-red-100 shadow-sm"
-                                            title="Eliminar Invitación"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })
-                ) : (
-                    <div className="py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 text-center shadow-inner">
-                         <div className="flex flex-col items-center gap-4">
-                            <Users className="w-10 h-10 text-slate-300" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">No tienes invitaciones registradas</p>
+                   <div className="space-y-8">
+                     {invitationType === 'visit' && (
+                       <div className="space-y-4">
+                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Fecha Programada</label>
+                         <div className="relative">
+                            <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                            <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} className="w-full h-16 luxury-input px-14 rounded-2xl text-sm font-black text-white" />
                          </div>
-                    </div>
-                )}
+                       </div>
+                     )}
+                     {invitationType === 'worker' && (
+                       <div className="space-y-6">
+                         <div className="grid grid-cols-2 gap-2">
+                             {['Obra', 'Jardín', 'Pileta', 'Limpieza'].map(cat => (
+                               <button key={cat} type="button" onClick={() => setWorkerCategory(cat)}
+                                 className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${workerCategory === cat ? 'bg-emerald-500 text-white' : 'bg-white/5 text-slate-500 hover:text-white'}`}>
+                                 {cat}
+                               </button>
+                             ))}
+                         </div>
+                         <div className="grid grid-cols-2 gap-4">
+                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="luxury-input h-14 px-6 rounded-xl text-[10px] font-black" />
+                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="luxury-input h-14 px-6 rounded-xl text-[10px] font-black" />
+                         </div>
+                       </div>
+                     )}
+                     {invitationType === 'delivery' && (
+                        <div className="flex justify-center gap-2">
+                           {[1, 2, 3, 5].map(q => (
+                             <button key={q} type="button" onClick={() => setDeliveryQuantity(q)}
+                               className={`w-12 h-12 rounded-xl flex items-center justify-center font-black transition-all ${deliveryQuantity === q ? 'bg-emerald-600 text-white shadow-lg' : 'bg-white/5 text-slate-500 hover:text-white hover:bg-white/10'}`}>{q}</button>
+                           ))}
+                        </div>
+                     )}
+                     {invitationType === 'permanent' && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="luxury-input h-14 px-6 rounded-xl text-[10px] font-black" />
+                            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="luxury-input h-14 px-6 rounded-xl text-[10px] font-black" />
+                        </div>
+                     )}
+                   </div>
+
+                   <button type="submit" disabled={submitting} className="w-full h-20 bg-emerald-600 hover:bg-emerald-500 text-white rounded-[2rem] font-black uppercase text-[11px] tracking-[0.2em] transition-all flex items-center justify-center gap-4 shadow-xl shadow-emerald-900/20 active:scale-95">
+                     {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Plus className="w-4 h-4" /> Generar Pase Digital</>}
+                   </button>
+                </form>
+               ) : (
+                <div className="text-center space-y-8 animate-in zoom-in-95 duration-500">
+                   <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto"><CheckCircle2 className="w-10 h-10 text-emerald-400" /></div>
+                   <h3 className="text-xl font-black uppercase text-white tracking-tighter italic">¡Pase Activo!</h3>
+                   <div className="bg-white p-8 rounded-[3rem] shadow-2xl inline-block relative group border-4 border-white/5">
+                      <QRCodeSVG value={invitationLink} size={200} level="H" includeMargin={true} />
+                      <div className="absolute inset-0 bg-white/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]"><QrCode className="w-12 h-12 text-slate-900" /></div>
+                   </div>
+                   <div className="flex flex-col gap-4">
+                      <button onClick={shareByWhatsApp} className="h-16 bg-[#25D366] text-white rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg shadow-green-900/20"><MessageCircle className="w-5 h-5" /> WhatsApp</button>
+                      <div className="grid grid-cols-2 gap-4">
+                         <button onClick={copyToClipboard} className={`h-14 rounded-2xl font-black text-[9px] uppercase transition-all ${copied ? 'bg-emerald-600 text-white' : 'bg-white/5 text-slate-500 hover:text-white'}`}>{copied ? "Copiado" : "Copiar Enlace"}</button>
+                         <button onClick={() => setInvitationLink(null)} className="h-14 bg-white/5 text-slate-500 hover:text-white rounded-2xl font-black text-[9px] uppercase">Nuevo</button>
+                      </div>
+                   </div>
+                </div>
+               )}
             </div>
+          </div>
+
+          <div className="lg:col-span-7 space-y-10">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
+               <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Accesos Vigentes</h3>
+                  <p className="text-slate-500 text-[10px] font-bold uppercase flex items-center gap-2"><Users className="w-3 h-3" /> {visibleInvitations.length} autorizados</p>
+               </div>
+               <div className="w-full sm:w-64 relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                  <input type="text" value={activeSearchTerm} onChange={(e) => setActiveSearchTerm(e.target.value)} placeholder="Filtrar..." className="w-full h-12 luxury-input pl-12 pr-4 rounded-xl text-[10px] font-black uppercase text-white bg-slate-900/50" />
+               </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 h-[700px] overflow-y-auto pb-20 pr-2 custom-scrollbar">
+              <AnimatePresence mode="popLayout">
+                {visibleInvitations.map((inv, idx) => {
+                  const rec = inv.visitor_records?.[0];
+                  let status = rec?.status || 'no_registered';
+                  const invName = rec?.full_name || inv.visitor_name || "Invitado a Identificar";
+                  const cleanName = inv.type === 'delivery' ? "DELIVERY" : invName.replace(/ \[.*\]/, "");
+                  
+                  return (
+                    <motion.div key={inv.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }} layout
+                      className="luxury-card group p-6 flex items-center justify-between gap-6 bg-slate-900/30 border border-white/5 shadow-lg">
+                       <div className="flex items-center gap-6 flex-1">
+                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black ${status === 'inside' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-slate-600'}`}>
+                             {inv.type === 'delivery' ? <Zap className="w-5 h-5" /> : cleanName[0].toUpperCase()}
+                          </div>
+                          <div className="space-y-1">
+                             <h4 className="text-xs font-black uppercase text-white leading-none">{cleanName}</h4>
+                             <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[8px] font-black uppercase text-slate-500 px-2 py-0.5 bg-white/5 rounded tracking-widest">{inv.type === 'visit' ? 'Visita' : inv.type === 'worker' ? (inv.category || 'Obra') : inv.type === 'delivery' ? 'Delivery' : 'Residente'}</span>
+                                {status === 'inside' && <span className="text-[8px] font-black uppercase text-emerald-400 flex items-center gap-1 tracking-widest"><div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" /> En barrio</span>}
+                             </div>
+                          </div>
+                       </div>
+                       <div className="flex items-center gap-2">
+                          {confirmDeleteId === inv.id ? (
+                             <button onClick={() => handleDeleteInvitation(inv.id)} className="h-10 px-4 bg-red-600 text-white rounded-xl text-[8px] font-black uppercase tracking-widest active:scale-95 transition-all">Borrar</button>
+                          ) : (
+                             <>
+                                <button onClick={() => (status === 'no_registered') ? handleExpressAuthorization(inv) : setInvitationLink(`${window.location.origin}/visitante/${inv.id}`)} className="w-10 h-10 flex items-center justify-center bg-white/5 text-slate-500 hover:bg-emerald-500 hover:text-white rounded-xl transition-all border border-white/5"><Share2 className="w-4 h-4" /></button>
+                                <button onClick={() => setConfirmDeleteId(inv.id)} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-xl transition-all border border-red-500/20"><Trash2 className="w-4 h-4" /></button>
+                             </>
+                          )}
+                       </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
 
-        {/* Configuración Modal */}
         <AnimatePresence>
-          {showSettings && (
-            <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="bg-white w-full max-w-md border border-slate-200 rounded-[3rem] shadow-2xl overflow-hidden"
-              >
-                <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-white rounded-2xl text-emerald-600 shadow-sm border border-slate-200">
-                      <Settings className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none">Ajustes</h2>
-                        <p className="text-[10px] font-black uppercase text-emerald-600 tracking-[0.3em] mt-2 leading-none">
-                           {userProfile?.full_name?.split(' ')[0]} <span className="opacity-30 text-[8px]">v6.5</span>
-                        </p>
-                    </div>
-                  </div>
-                  <button onClick={() => setShowSettings(false)} className="p-3 bg-white hover:bg-slate-100 rounded-full border border-slate-200 transition-colors shadow-sm">
-                    <X className="w-5 h-5 text-slate-400" />
-                  </button>
-                </div>
-
-                <div className="p-8 space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Nombre de Usuario</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input 
-                        type="text" 
-                        value={newUsername} 
-                        onChange={(e) => setNewUsername(e.target.value.toLowerCase())}
-                        placeholder="nuevo_usuario"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 focus:border-emerald-500/50 outline-none transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-4">Cambiar Contraseña</label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input 
-                        type="password" 
-                        value={newPassword} 
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Nueva contraseña"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 focus:border-emerald-500/50 outline-none transition-all shadow-inner"
-                      />
-                    </div>
-                  </div>
-
-                  {settingsError && (
-                    <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-[10px] font-black text-red-600 uppercase tracking-widest text-center">
-                      {settingsError}
-                    </div>
-                  )}
-
-                  {settingsSuccess && (
-                    <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-[10px] font-black text-emerald-600 uppercase tracking-widest text-center flex items-center justify-center gap-2">
-                      <CheckCircle className="w-4 h-4" /> {settingsSuccess}
-                    </div>
-                  )}
-
-                  <button 
-                    onClick={handleUpdateSettings}
-                    disabled={isUpdating}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/20 text-white transition-all flex items-center justify-center gap-3 mt-4 active:scale-95"
-                  >
-                    {isUpdating ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> Guardar Cambios</>}
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
+            {showSettings && (
+             <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-6">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} 
+                  className="bg-slate-900/90 backdrop-blur-2xl w-full max-w-sm rounded-[3rem] shadow-2xl p-10 border border-white/10 relative overflow-hidden">
+                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
+                   <div className="flex justify-between items-center mb-8">
+                      <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Ajustes</h2>
+                      <button onClick={() => setShowSettings(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                   </div>
+                   <div className="space-y-6">
+                      <div className="space-y-2">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 ml-2">Nombre de Usuario</p>
+                        <input type="text" value={newUsername} onChange={e => setNewUsername(e.target.value)} placeholder="Usuario" className="w-full h-14 luxury-input px-6 rounded-xl text-xs font-black text-white" />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 ml-2">Nueva Contraseña</p>
+                        <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="••••••••" className="w-full h-14 luxury-input px-6 rounded-xl text-xs font-black text-white" />
+                      </div>
+                      <button onClick={handleUpdateSettings} disabled={isUpdating} className="w-full h-16 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-emerald-900/20 active:scale-95 transition-all">
+                        {isUpdating ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Guardar Cambios"}
+                      </button>
+                   </div>
+                </motion.div>
+             </div>
+            )}
         </AnimatePresence>
       </div>
+      <footer className="mt-20 text-center opacity-10 text-[8px] font-black uppercase tracking-[1em] text-white underline decoration-emerald-500 decoration-2 underline-offset-8">{CONFIG.brandName} • 2026</footer>
     </div>
   );
 }
-

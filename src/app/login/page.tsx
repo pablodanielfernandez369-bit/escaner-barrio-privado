@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, User, Lock, Loader2, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { CONFIG } from "@/config";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -97,8 +98,8 @@ export default function LoginPage() {
           <div className="inline-flex p-4 bg-emerald-500/10 rounded-3xl mb-4 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.1)] transition-transform hover:scale-110 duration-500">
             <ShieldCheck className="w-10 h-10 text-emerald-500" />
           </div>
-          <h1 className="text-3xl font-black uppercase tracking-[0.2em] text-white leading-none mb-2">Santa Inés</h1>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500/60">Security Infrastructure v4.0</p>
+          <h1 className="text-3xl font-black uppercase tracking-[0.2em] text-white leading-none mb-2">{CONFIG.neighborhoodName}</h1>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500/60">{CONFIG.brandName} • Infrastructure v4.0</p>
         </div>
 
         <div className="glass-card rounded-[3rem] p-8 sm:p-10 shadow-2xl border border-white/5 relative overflow-hidden">
@@ -182,8 +183,8 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-10 text-center text-[10px] font-black uppercase text-slate-700 tracking-[0.2em]">
-          Santa Inés Neighbourhood &copy; 2026<br/>
-          <span className="text-slate-800">Security Infrastructure v3.0.0</span>
+          {CONFIG.neighborhoodName} Neighbourhood &copy; 2026<br/>
+          <span className="text-slate-800">{CONFIG.brandName} Infrastructure v3.0.0</span>
         </p>
       </motion.div>
     </div>
